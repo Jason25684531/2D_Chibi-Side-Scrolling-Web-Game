@@ -2,8 +2,8 @@ export type EnemyKind='melee'|'ranged'|'drone';
 export type PowerKind='laptop'|'ally';
 export type Terrain={id:string;kind:'ground'|'platform'|'one-way'|'moving'|'bounce';x:number;y:number;width:number;height:number;travel?:number;travelY?:number};
 export type Spawn={id:string;x:number;y:number};
-export type LevelData={width:number;height:number;start:{x:number;y:number};goal:Spawn;terrain:Terrain[];badges:Spawn[];enemies:(Spawn&{kind:EnemyKind})[];powerups:(Spawn&{kind:PowerKind})[]};
-export const LEVEL:LevelData={width:4000,height:1100,start:{x:120,y:776},goal:{id:'goal',x:3900,y:740},
+export type LevelData={width:number;height:number;pitY:number;start:{x:number;y:number};goal:Spawn;terrain:Terrain[];badges:Spawn[];enemies:(Spawn&{kind:EnemyKind})[];powerups:(Spawn&{kind:PowerKind})[]};
+export const LEVEL:LevelData={width:4000,height:1100,pitY:1000,start:{x:120,y:776},goal:{id:'goal',x:3900,y:740},
   terrain:[
     {id:'start-ground',kind:'ground',x:475,y:830,width:950,height:60},
     {id:'middle-ground',kind:'ground',x:1825,y:830,width:1350,height:60},

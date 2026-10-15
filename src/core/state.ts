@@ -17,8 +17,9 @@ export class RunStateManager {
   elapsed = 0;
   remaining: number;
   tick = 0;
+  get timeTier() { return `${this.duration}`; }
   readonly scoredEnemyIds = new Set<string>();
-  constructor(readonly duration: number, readonly sessionId: string, readonly timeTier = `${duration}`) {
+  constructor(readonly duration: number, readonly sessionId: string) {
     if (!Number.isFinite(duration) || duration <= 0) throw new Error('Invalid time tier');
     this.remaining = duration;
   }
@@ -37,5 +38,4 @@ export class RunStateManager {
     this.phase = reason === 'goal' ? 'goal-reached' : 'time-up'; return true;
   }
   finish() { if (this.phase === 'goal-reached' || this.phase === 'time-up') this.phase = 'finished'; }
-  replay() { const next = new RunStateManager(this.duration, this.sessionId, this.timeTier); next.start(); return next; }
 }

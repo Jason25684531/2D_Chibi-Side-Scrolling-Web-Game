@@ -101,3 +101,4 @@ openspec/*
 # Track the Experience 3 planning change while preserving other ignore rules.
 
 docs/*
+webUIUX_Ref/*

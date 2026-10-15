@@ -15,7 +15,7 @@ import {RespawnManager} from '../respawn/manager';
 import {EnemySystem} from '../enemy/system';
 export class GameplayScene extends Phaser.Scene {
   run!: RunStateManager;
-  flow = new GameplayStateMachine();
+  flow!: GameplayStateMachine;
   inputAdapter!: InputAdapter;
   fixed!: FixedStepController;
   player!: Phaser.GameObjects.Rectangle;
@@ -29,10 +29,10 @@ export class GameplayScene extends Phaser.Scene {
   session!:GameplaySession;badges!:BadgeWorld;respawner!:RespawnManager;enemies!:EnemySystem;
   pickups:{id:string;kind:'laptop'|'ally';object:Phaser.GameObjects.Rectangle}[]=[];
   goal!:Phaser.GameObjects.Rectangle;powerVersion=0;sizeScale=1;sizeBlocked=false;
+  menu=-1;lastMove=0;menuView!:Phaser.GameObjects.Text;menuMask!:Phaser.GameObjects.Rectangle;
   constructor() { super('Gameplay'); }
   create() {
-    const duration=Number((document.querySelector('#tier') as HTMLSelectElement).value);
-    this.session=new GameplaySession(duration,sessionStorage.sessionId ??= crypto.randomUUID());this.run=this.session.run;
+    this.session=new GameplaySession(P.timeTier,sessionStorage.sessionId ??= crypto.randomUUID());this.run=this.session.run;
     this.flow=new GameplayStateMachine(); this.flow.enterGameplay();
     this.fixed=new FixedStepController(Number(new URLSearchParams(location.search).get('hz')) === 60 ? 60 : 24);
     this.physics.world.fixedStep=false;
@@ -45,8 +45,8 @@ export class GameplayScene extends Phaser.Scene {
     this.body.setCollideWorldBounds(true);
     this.controller=new PlayerController(this.body);
     this.presentation=new CharacterView(this,this.player,(document.querySelector('#character') as HTMLSelectElement).value);
-    this.pending={jump:false,dash:false,throw:false};
-    this.terrain=new TerrainSystem(this,LEVEL,this.player,()=>this.run.elapsed,()=>this.controller.bounce());
+    this.clearInput();
+    this.terrain=new TerrainSystem(this,LEVEL,this.player,()=>this.run.elapsed,()=>{this.controller.bounce();this.session.stats.bounces++;});
     this.cameraManager=new CameraManager(this.cameras.main,LEVEL.width,LEVEL.height);this.cameraManager.reset(this.player.x,this.player.y);
     this.respawner=new RespawnManager(this.terrain,LEVEL);
     this.badges=new BadgeWorld(this,this.session,this.player,LEVEL.badges);
@@ -56,11 +56,26 @@ export class GameplayScene extends Phaser.Scene {
     this.powerVersion=this.session.power.version;this.sizeScale=1;this.sizeBlocked=false;
     document.querySelector('#result')!.textContent='';
     this.hud=this.add.text(16,14,'',{fontSize:'16px',color:'#ffffff'}).setScrollFactor(0).setDepth(100);
+    this.menu=-1;this.menuMask=this.add.rectangle(P.width/2,P.height/2,P.width,P.height,0x000000,.8).setScrollFactor(0).setDepth(200).setVisible(false);
+    this.menuView=this.add.text(P.width/2,P.height/2,'',{fontSize:'28px',color:'#ffffff',align:'center'}).setOrigin(.5).setScrollFactor(0).setDepth(201);
     this.events.once('shutdown',()=>{ this.inputAdapter.dispose(); this.session.dispose(); });
     (window as any).__gameplay=this;
   }
-  togglePause() { if(this.run.phase==='paused') this.run.resume(); else this.run.pause(); this.fixed.reset(); this.inputAdapter.clear();this.pending={jump:false,dash:false,throw:false}; }
-  home() { this.run.pause(); this.inputAdapter.clear(); this.flow.transition('P0'); this.scene.stop(); }
+  clearInput() { this.inputAdapter.clear(); this.pending={jump:false,dash:false,throw:false}; }
+  togglePause() { if(this.run.phase==='paused') this.run.resume(); else this.run.pause(); this.fixed.reset(); this.clearInput(); }
+  home() { this.run.pause(); this.clearInput(); this.flow.transition('P0'); this.scene.stop(); }
+  // UX p14 Home menu: Restart only before the Result is settled. ponytail: confirm = Jump until B10 maps the arcade confirm button.
+  menuOptions() { return this.session.result ? ['繼續','回到主畫面'] : ['繼續','重新開始','回到主畫面']; }
+  setMenu(open:boolean) { if(open){this.menu=0;this.run.pause();} else {this.menu=-1;this.run.resume();} this.fixed.reset(); this.clearInput(); }
+  /** Returns true when the menu consumed this frame's input. */
+  updateMenu(a:{move:number;jump:boolean;home:boolean}) {
+    if(a.home) { this.setMenu(this.menu<0); return true; }
+    if(this.menu<0) return false;
+    const options=this.menuOptions();
+    if(a.move && a.move!==this.lastMove) this.menu=(this.menu+a.move+options.length)%options.length;
+    if(a.jump) { const choice=options[this.menu]; if(choice==='繼續') this.setMenu(false); else if(choice==='重新開始') this.scene.restart(); else this.home(); }
+    return true;
+  }
   takeDamage(cause:string){
     const hit=this.session.hit(cause);if(hit.kind==='immune')return;
     this.badges.scatter(hit.drops,this.player.x,this.player.y);
@@ -70,7 +85,7 @@ export class GameplayScene extends Phaser.Scene {
   respawn(cause:string){
     if(!this.session.respawn(cause))return;
     this.resizePlayer(1);const p=this.respawner.position(P.bodyWidth,P.bodyHeight);
-    this.body.reset(p.x,p.y);this.controller.reset();this.inputAdapter.clear();this.pending={jump:false,dash:false,throw:false};
+    this.body.reset(p.x,p.y);this.controller.reset();this.clearInput();
     this.enemies.reset();this.cameraManager.reset(p.x,p.y);this.session.recovered();
   }
   resizePlayer(scale:number){
@@ -85,7 +100,7 @@ export class GameplayScene extends Phaser.Scene {
   }
   finalize(){
     if(!this.session.result)return;
-    this.body.setVelocity(0);this.inputAdapter.clear();this.pending={jump:false,dash:false,throw:false};
+    this.body.setVelocity(0);this.clearInput();
     this.controller.state=this.session.result.endReason==='goal'?'WIN':'IDLE';
     this.session.power.clear();this.syncPower();this.enemies.clearShots();
     if(this.flow.flow==='P4'){this.flow.transition('P5');this.flow.transition('P6');}
@@ -94,7 +109,9 @@ export class GameplayScene extends Phaser.Scene {
   update(_time: number,delta: number) {
     const pad=this.testPad ?? Array.from(navigator.getGamepads?.() ?? []).find(p=>p?.connected);
     const a=this.inputAdapter.sample(pad);
-    if(a.home) { this.home(); return; }
+    const inMenu=this.updateMenu(a);this.lastMove=a.move;
+    this.menuMask.setVisible(this.menu>=0);this.menuView.setText(this.menu<0?'':this.menuOptions().map((o,i)=>i===this.menu?`▶ ${o} ◀`:o).join('\n\n'));
+    if(inMenu) return;
     if(a.pause) this.togglePause();
     if(this.run.phase==='running')for(const k of ['jump','dash','throw'] as const)this.pending[k] ||= a[k];
     if(this.run.phase==='running') this.fixed.update(delta/1000,dt=>{
@@ -110,8 +127,9 @@ export class GameplayScene extends Phaser.Scene {
       const bounds=new Phaser.Geom.Rectangle(this.body.x,this.body.y,this.body.width,this.body.height);
       for(const p of this.pickups)if(p.object.active&&Phaser.Geom.Intersects.RectangleToRectangle(bounds,p.object.getBounds())){this.session.activate(p.kind,p.id);p.object.destroy();}
       this.respawner.track(this.player.x,this.player.y,this.body.width,this.body.height,this.body.blocked.down&&this.run.elapsed>=this.controller.dashUntil,this.enemies.dangerAt(this.player.x));
-      if(this.player.y>1000)this.respawn('pit');
-      if(Phaser.Geom.Intersects.RectangleToRectangle(bounds,this.goal.getBounds())){this.session.finish('goal');this.finalize();}
+      if(this.player.y>LEVEL.pitY)this.respawn('pit');
+      // Goal is a full-height gate line: a 6H bounce must not overfly the portal.
+      if(this.body.right>=this.goal.getBounds().left){this.session.finish('goal');this.finalize();}
       this.cameraManager.update(this.player.x,this.player.y,dt);
     });
     this.presentation.update(this.controller.state,this.controller.facing,this.sizeScale);
