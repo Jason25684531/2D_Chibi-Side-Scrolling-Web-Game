@@ -1,0 +1,45 @@
+import {test,expect} from '@playwright/test';
+test('D4/D5: physical pickup, stomp, scatter/recovery, respawn credit, mutually exclusive abilities, goal and replay',async({page})=>{
+  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.goto('/');await page.waitForFunction(()=>(window as any).__gameplay?.body?.blocked.down);
+  await page.evaluate(()=>{(window as any).__gameplay.body.reset(180,776);});
+  await page.waitForFunction(()=>(window as any).__gameplay.session.badges.held>=1);
+  await page.evaluate(()=>{const s=(window as any).__gameplay;const e=s.enemies.enemies[0];s.body.reset(e.object.x,e.object.y-100);s.body.setVelocity(0,160);});
+  await page.waitForFunction(()=>(window as any).__gameplay.enemies.enemies[0].defeated);
+  const score=await page.evaluate(()=>(window as any).__gameplay.session.score.total);expect(score).toBeGreaterThan(0);
+  await page.evaluate(()=>{const s=(window as any).__gameplay;s.body.reset(300,776);s.takeDamage('fixture');});
+  expect(await page.evaluate(()=>(window as any).__gameplay.session.badges.dropped)).toBe(true);
+  await page.waitForTimeout(300);
+  await page.evaluate(()=>{const s=(window as any).__gameplay;const o=[...s.badges.objects.entries()].find(([id]:any)=>id.startsWith('drop-'))?.[1] as any;if(o)s.body.reset(o.x,o.y);});
+  await page.waitForFunction(()=>(window as any).__gameplay.session.badges.held>0);
+  await page.evaluate(()=>{const s=(window as any).__gameplay;s.respawn('pit');const e=s.enemies.enemies[0];s.body.reset(e.object.x,e.object.y-100);s.body.setVelocity(0,160);});
+  await page.waitForFunction(()=>(window as any).__gameplay.enemies.enemies[0].defeated);
+  expect(await page.evaluate(()=>(window as any).__gameplay.session.score.total)).toBe(score);
+  expect(await page.evaluate(()=>(window as any).__gameplay.session.combo.count)).toBe(0);
+  await page.evaluate(()=>{(window as any).__gameplay.body.reset(400,776);});await page.waitForFunction(()=>(window as any).__gameplay.session.power.kind==='laptop');
+  await page.keyboard.press('KeyJ');await page.waitForTimeout(100);expect(await page.evaluate(()=>(window as any).__gameplay.enemies.shots.some((s:any)=>s.owner==='player'))).toBe(true);
+  await page.evaluate(()=>{(window as any).__gameplay.body.reset(1300,776);});await page.waitForFunction(()=>(window as any).__gameplay.session.power.kind==='ally');await page.waitForTimeout(80);
+  expect(await page.evaluate(()=>(window as any).__gameplay.sizeScale)).toBe(1.5);
+  expect(await page.evaluate(()=>(window as any).__gameplay.enemies.shots.some((s:any)=>s.owner==='player'))).toBe(false);
+  await page.evaluate(()=>{const s=(window as any).__gameplay;s.session.power.expires=s.run.elapsed+.08;});await page.waitForTimeout(180);
+  expect(await page.evaluate(()=>(window as any).__gameplay.sizeScale)).toBe(1);
+  await page.evaluate(()=>{(window as any).__gameplay.body.reset(3900,776);});await page.waitForFunction(()=>(window as any).__gameplay.session.result?.endReason==='goal');
+  const result=await page.evaluate(()=>(window as any).__gameplay.session.result);expect(result.scoreBreakdown.goal).toBe(50);expect(result.scoreBreakdown.noDrop).toBe(0);
+  await page.waitForTimeout(150);expect(await page.evaluate(()=>(window as any).__gameplay.run.remaining)).toBe(result.remainingTime);
+  await page.click('#replay');await page.waitForFunction(id=>(window as any).__gameplay.run.runId!==id,result.runId);
+  expect(await page.evaluate(()=>(window as any).__gameplay.run.timeTier)).toBe(result.timeTier);expect(await page.evaluate(()=>(window as any).__gameplay.session.score.total)).toBe(0);
+  expect(errors).toEqual([]);
+});
+test('D5: time-up locks result and rejects late score/pickup/goal',async({page})=>{
+ await page.goto('/');await page.waitForFunction(()=>!!(window as any).__gameplay?.session);
+ await page.evaluate(()=>{const s=(window as any).__gameplay;s.run.elapsed=s.run.duration-.08;});
+ await page.waitForFunction(()=>(window as any).__gameplay.session.result?.endReason==='time-up');
+ const r=await page.evaluate(()=>{const s=(window as any).__gameplay;s.session.credit('late','melee');s.session.pickup('late');s.session.finish('goal');return s.session.result;});
+ expect(r.remainingTime).toBe(0);expect(r.scoreBreakdown.goal).toBe(0);expect(r.scoreBreakdown.noDrop).toBe(0);
+});
+test('D2 asset staging: optional source atlases load unchanged with alternate character',async({page})=>{
+ await page.goto('/?art=1');await page.waitForFunction(()=>!!(window as any).__gameplay?.presentation?.sprite);
+ await page.selectOption('#character','kael');await page.click('#start');await page.waitForFunction(()=>(window as any).__gameplay.presentation.sprite?.texture.key==='kael');
+ expect((await page.request.get('/assets/character-manifest.json')).ok()).toBe(true);
+ expect(await page.evaluate(()=>(window as any).__gameplay.controller.constructor.name)).toBe('PlayerController');
+});

@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Experience 3 — Gameplay Foundation</title></head>
+<body>
+  <main><h1>Experience 3 · 灰盒 Gameplay</h1>
+    <p id="rules">TEST ONLY：正式 GDD／Score Table 尚待確認。沒有 Game Over。</p>
+    <label>時間（測試檔位）<select id="tier"><option value="120">120 秒</option><option value="60">60 秒</option><option value="30">30 秒</option></select></label>
+    <label>角色<select id="character"><option>aria</option><option>kael</option><option>riven</option></select></label>
+    <button id="start">Start / Restart</button><button id="pause">Pause / Resume</button><button id="replay">Replay</button><button id="home">Home</button>
+    <div id="game" aria-label="可用鍵盤或搖桿操作的灰盒遊戲"></div>
+    <p>移動 A/D 或 ←/→ · 跳／雙段跳 Space · Dash Shift · Throw J · Pause Esc · Home H<br>Gamepad：D-pad／左搖桿、A 跳、B Dash、X Throw、Start Pause、Back Home。</p>
+    <pre id="result" aria-live="polite"></pre>
+  </main><script type="module" src="/src/main.ts"></script>
+</body></html>
