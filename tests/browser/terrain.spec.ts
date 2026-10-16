@@ -1,6 +1,6 @@
 import {test,expect} from '@playwright/test';
 for(const hz of [24,60])test(`D3: moving carry, pit recovery and camera ${hz}Hz`,async({page})=>{
-  await page.goto(`/?hz=${hz}`);await page.waitForFunction(()=>(window as any).__gameplay?.body?.blocked.down);
+  await page.goto(`/?debug=1&hz=${hz}`);await page.waitForFunction(()=>(window as any).__gameplay?.body?.blocked.down);
   await page.evaluate(()=>{const s=(window as any).__gameplay;const p=s.terrain.entries.find((e:any)=>e.data.kind==='moving').object;s.body.reset(p.x,p.y-34);s.controller.reset();});
   await page.waitForTimeout(250);
   const before=await page.evaluate(()=>{const s=(window as any).__gameplay;const p=s.terrain.entries.find((e:any)=>e.data.kind==='moving').object;return{x:s.player.x,relative:s.player.x-p.x,y:s.body.bottom};});
@@ -16,7 +16,7 @@ for(const hz of [24,60])test(`D3: moving carry, pit recovery and camera ${hz}Hz`
   expect(easing.returning).toBeGreaterThan(easing.high);expect(easing.interrupted).toBeLessThan(easing.returning);expect(easing.returned).toBe(300);expect(easing.right).toBe(3040);expect(easing.resetX).toBe(0);expect(easing.resetY).toBe(300);
 });
 test('vertical moving platform carries through reversal and releases on jump',async({page})=>{
-  await page.goto('/');await page.waitForFunction(()=>(window as any).__gameplay?.body?.blocked.down);
+  await page.goto('/?debug=1');await page.waitForFunction(()=>(window as any).__gameplay?.body?.blocked.down);
   await page.evaluate(()=>{const s=(window as any).__gameplay;const p=s.terrain.entries.find((e:any)=>e.data.kind==='moving');p.data.travel=0;p.data.travelY=30;s.body.reset(p.object.x,p.object.y-34);s.controller.reset();});
   await page.waitForTimeout(200);
   const samples:{y:number;gap:number;vy:number}[]=[];
@@ -28,7 +28,7 @@ test('vertical moving platform carries through reversal and releases on jump',as
 });
 
 test('Scene pause freezes an active camera return and resume completes it',async({page})=>{
-  await page.goto('/');await page.waitForFunction(()=>(window as any).__gameplay?.body?.blocked.down);
+  await page.goto('/?debug=1');await page.waitForFunction(()=>(window as any).__gameplay?.body?.blocked.down);
   await page.evaluate(()=>{
     const s=(window as any).__gameplay;
     s.body.reset(1800,400);s.controller.reset();s.body.setVelocityY(-100);

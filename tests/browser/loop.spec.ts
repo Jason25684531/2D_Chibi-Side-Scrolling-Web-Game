@@ -1,7 +1,7 @@
 import {test,expect} from '@playwright/test';
 test('D4/D5: physical pickup, stomp, scatter/recovery, respawn credit, mutually exclusive abilities, goal and replay',async({page})=>{
   const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
-  await page.goto('/');await page.waitForFunction(()=>(window as any).__gameplay?.body?.blocked.down);
+  await page.goto('/?debug=1');await page.waitForFunction(()=>(window as any).__gameplay?.body?.blocked.down);
   await page.evaluate(()=>{(window as any).__gameplay.body.reset(180,776);});
   await page.waitForFunction(()=>(window as any).__gameplay.session.badges.held>=1);
   await page.evaluate(()=>{const s=(window as any).__gameplay;const e=s.enemies.enemies[0];s.body.reset(e.object.x,e.object.y-100);s.body.setVelocity(0,160);});
@@ -31,15 +31,16 @@ test('D4/D5: physical pickup, stomp, scatter/recovery, respawn credit, mutually 
   expect(errors).toEqual([]);
 });
 test('D5: time-up locks result and rejects late score/pickup/goal',async({page})=>{
- await page.goto('/');await page.waitForFunction(()=>!!(window as any).__gameplay?.session);
+ await page.goto('/?debug=1');await page.waitForFunction(()=>!!(window as any).__gameplay?.session);
  await page.evaluate(()=>{const s=(window as any).__gameplay;s.run.elapsed=s.run.duration-.08;});
  await page.waitForFunction(()=>(window as any).__gameplay.session.result?.endReason==='time-up');
  const r=await page.evaluate(()=>{const s=(window as any).__gameplay;s.session.credit('late','melee');s.session.pickup('late');s.session.finish('goal');return s.session.result;});
  expect(r.remainingTime).toBe(0);expect(r.scoreBreakdown.goal).toBe(0);expect(r.scoreBreakdown.noDrop).toBe(0);
 });
-test('D2 asset staging: optional source atlases load unchanged with alternate character',async({page})=>{
- await page.goto('/?art=1');await page.waitForFunction(()=>!!(window as any).__gameplay?.presentation?.sprite);
- await page.selectOption('#character','kael');await page.click('#start');await page.waitForFunction(()=>(window as any).__gameplay.presentation.sprite?.texture.key==='kael');
+test('M2 placeholder lock preserves bodies even with art query and alternate identity',async({page})=>{
+ await page.goto('/?debug=1&art=1');await page.waitForFunction(()=>!!(window as any).__gameplay?.presentation?.visual);
+ await page.selectOption('#character','kael');await page.click('#start');await page.waitForTimeout(100);
+ expect(await page.evaluate(()=>{const s=(window as any).__gameplay;return{color:s.presentation.visual.fillColor,width:s.body.width,height:s.body.height,sprite:!!s.presentation.sprite,enemy:s.enemies.enemies[0].visual.fillColor};})).toEqual({color:0,width:32,height:48,sprite:false,enemy:0});
  expect((await page.request.get('/assets/character-manifest.json')).ok()).toBe(true);
  expect(await page.evaluate(()=>(window as any).__gameplay.controller.constructor.name)).toBe('PlayerController');
 });

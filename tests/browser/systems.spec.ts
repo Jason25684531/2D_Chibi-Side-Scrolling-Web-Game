@@ -1,6 +1,6 @@
 import {test,expect} from '@playwright/test';
 test('enemy lifecycle, safe fallback and Ally attraction use real runtime objects',async({page})=>{
-  await page.goto('/');await page.waitForFunction(()=>(window as any).__gameplay?.body?.blocked.down);
+  await page.goto('/?debug=1');await page.waitForFunction(()=>(window as any).__gameplay?.body?.blocked.down);
   const result=await page.evaluate(()=>{
     const s=(window as any).__gameplay;s.togglePause();
     s.respawner.safe={x:1070,y:776};const fallback=s.respawner.position(32,48);

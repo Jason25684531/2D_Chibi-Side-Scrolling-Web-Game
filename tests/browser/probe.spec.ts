@@ -3,7 +3,7 @@ import {mkdir,writeFile} from 'node:fs/promises';
 test('24/60Hz real runtime probe: jump latency and high-speed collision',async({page})=>{
  const results=[];
  for(const hz of [24,60]){
-  await page.goto(`/?hz=${hz}`);await page.waitForFunction(()=>(window as any).__gameplay?.body?.blocked.down);
+  await page.goto(`/?debug=1&hz=${hz}`);await page.waitForFunction(()=>(window as any).__gameplay?.body?.blocked.down);
   await page.evaluate(()=>{const s=(window as any).__gameplay;(window as any).__probe={start:performance.now(),tick:s.run.tick};s.events.on('postupdate',()=>{const p=(window as any).__probe;if(!p.latency&&s.body.velocity.y<0){p.latency=performance.now()-p.start;p.responseTick=s.run.tick;}});});
   await page.keyboard.down('Space');await page.waitForFunction(()=>(window as any).__probe.latency>0);await page.keyboard.up('Space');
   const response=await page.evaluate(()=>(window as any).__probe);expect(response.responseTick-response.tick).toBeLessThanOrEqual(3);

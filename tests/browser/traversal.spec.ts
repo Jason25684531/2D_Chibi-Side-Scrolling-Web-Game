@@ -1,6 +1,6 @@
 import {test,expect} from '@playwright/test';
 test('full level keyboard traversal from Start to Goal without teleporting',async({page})=>{
- test.setTimeout(60000);await page.goto('/');await page.waitForFunction(()=>(window as any).__gameplay?.body?.blocked.down);
+ test.setTimeout(60000);await page.goto('/?debug=1');await page.waitForFunction(()=>(window as any).__gameplay?.body?.blocked.down);
  await page.keyboard.down('ArrowRight');let done=false;
  for(let n=0;n<100;n++){
    await page.keyboard.down('Space');await page.waitForTimeout(330);await page.keyboard.up('Space');await page.waitForTimeout(80);

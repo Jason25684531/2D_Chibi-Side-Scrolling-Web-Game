@@ -1,6 +1,6 @@
 import {test,expect} from '@playwright/test';
 for(const hz of [24,60])test(`D2: jumps, landing, dash wall ${hz}Hz`,async({page})=>{
-  await page.goto(`/?hz=${hz}`);await page.waitForFunction(()=>(window as any).__gameplay?.body?.blocked.down);
+  await page.goto(`/?debug=1&hz=${hz}`);await page.waitForFunction(()=>(window as any).__gameplay?.body?.blocked.down);
   const base=await page.evaluate(()=>(window as any).__gameplay.player.y);
   await page.keyboard.down('Space');await page.waitForTimeout(160);
   expect(await page.evaluate(()=>(window as any).__gameplay.player.y)).toBeLessThan(base-30);
@@ -16,7 +16,7 @@ for(const hz of [24,60])test(`D2: jumps, landing, dash wall ${hz}Hz`,async({page
 });
 
 for(const hz of [24,60])test(`air dash under ceiling recovers to falling and walking ${hz}Hz`,async({page})=>{
-  await page.goto(`/?hz=${hz}`);await page.waitForFunction(()=>(window as any).__gameplay?.body?.blocked.down);
+  await page.goto(`/?debug=1&hz=${hz}`);await page.waitForFunction(()=>(window as any).__gameplay?.body?.blocked.down);
   await page.evaluate(()=>{
     const s=(window as any).__gameplay;
     const roof=s.add.rectangle(230,680,300,10,0xffffff);

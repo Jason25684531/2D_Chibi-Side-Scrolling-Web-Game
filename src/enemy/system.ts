@@ -3,39 +3,42 @@ import type {LevelData,EnemyKind} from '../level/data';
 import type {GameplaySession} from '../core/session';
 import type {TerrainSystem} from '../terrain/system';
 import {TEST_PROFILE as P} from '../core/config';
-const COLOR={melee:0xe36f6b,ranged:0xf29dba,drone:0xe9a85a};
-export type Enemy={id:string;kind:EnemyKind;x:number;y:number;object:Phaser.GameObjects.Rectangle;defeated:boolean;stunnedUntil:number;attackReady:number};
+export type Enemy={id:string;kind:EnemyKind;x:number;y:number;object:Phaser.GameObjects.Rectangle;visual:Phaser.GameObjects.Rectangle;label:Phaser.GameObjects.Text;defeated:boolean;stunnedUntil:number;attackReady:number};
 export class EnemySystem {
   enemies:Enemy[]=[];
   shots:{object:Phaser.GameObjects.Rectangle;expires:number;owner:'player'|'enemy';colliders:Phaser.Physics.Arcade.Collider[]}[]=[];
   constructor(readonly scene:Phaser.Scene,readonly session:GameplaySession,readonly player:Phaser.GameObjects.Rectangle,readonly level:LevelData,terrain:TerrainSystem,readonly hurt:(cause:string)=>void){
     for(const data of level.enemies){
-      const object=scene.add.rectangle(data.x,data.y,34,44,COLOR[data.kind]).setDepth(3);
+      const object=scene.add.rectangle(data.x,data.y,34,44,0x000000).setAlpha(0).setDepth(3);
+      const visual=scene.add.rectangle(data.x,data.y,44,44,0x000000).setStrokeStyle(2,0x8866ff).setDepth(3);
+      const label=scene.add.text(data.x,data.y-27,'ENEMY',{fontSize:'11px'}).setOrigin(.5,1).setDepth(4);
       scene.physics.add.existing(object);const body=object.body as Phaser.Physics.Arcade.Body;body.setAllowGravity(data.kind!=='drone');
       for(const t of terrain.entries)if(t.data.kind==='ground')scene.physics.add.collider(object,t.object);
-      const e={...data,object,defeated:false,stunnedUntil:0,attackReady:1};this.enemies.push(e);
+      const e={...data,object,visual,label,defeated:false,stunnedUntil:0,attackReady:1};this.enemies.push(e);
       scene.physics.add.overlap(player,object,()=>{
         if(e.defeated||session.run.phase!=='running')return;
         const p=player.body as Phaser.Physics.Arcade.Body,b=object.body as Phaser.Physics.Arcade.Body;
-        if(session.power.kind==='ally'||(p.velocity.y>0&&p.prev.y+p.height<=b.top+10)){this.defeat(e);p.setVelocityY(-260);}
+        if(session.power.kind==='ally'||(p.velocity.y>0&&p.prev.y+p.height<=b.top+10)){this.defeat(e,session.power.kind==='ally');p.setVelocityY(-260);}
         else if(session.run.elapsed>=e.stunnedUntil)hurt(e.id);
       });
     }
   }
-  defeat(e:Enemy){if(e.defeated)return;e.defeated=true;e.object.setVisible(false);(e.object.body as Phaser.Physics.Arcade.Body).enable=false;this.session.credit(e.id,e.kind);}
+  defeat(e:Enemy,ally=false){if(e.defeated)return;e.defeated=true;e.object.setVisible(false);(e.object.body as Phaser.Physics.Arcade.Body).enable=false;this.session.credit(e.id,e.kind,ally);}
   shoot(x:number,y:number,direction:number,owner:'player'|'enemy'){
     const object=this.scene.add.rectangle(x,y,14,8,owner==='player'?0x8ff7ff:0xff715c).setDepth(6);this.scene.physics.add.existing(object);
     const body=object.body as Phaser.Physics.Arcade.Body;body.setAllowGravity(false).setVelocityX(direction*(owner==='player'?500:230));
     const colliders:Phaser.Physics.Arcade.Collider[]=[];
     this.shots.push({object,expires:this.session.run.elapsed+1.5,owner,colliders});
     if(owner==='enemy')colliders.push(this.scene.physics.add.overlap(object,this.player,()=>{if(object.active){this.hurt('ranged-shot');object.destroy();}}));
-    else for(const e of this.enemies)colliders.push(this.scene.physics.add.overlap(object,e.object,()=>{if(object.active&&!e.defeated){e.stunnedUntil=this.session.run.elapsed+P.paralysisDuration;this.session.stats.paralyses++;object.destroy();}}));
+    else for(const e of this.enemies)colliders.push(this.scene.physics.add.overlap(object,e.object,()=>{if(object.active&&!e.defeated){e.stunnedUntil=this.session.run.elapsed+P.paralysisDuration;this.session.paralyze(e.id);object.destroy();}}));
   }
   update(dt:number){
     const now=this.session.run.elapsed;
     for(const e of this.enemies){
+      e.visual.setVisible(!e.defeated).setPosition(e.object.x,e.object.y);
+      e.label.setVisible(!e.defeated).setPosition(e.object.x,e.object.y-27);
       if(e.defeated)continue;const b=e.object.body as Phaser.Physics.Arcade.Body;
-      e.object.setFillStyle(now<e.stunnedUntil?0x8ff7ff:COLOR[e.kind]);
+      e.visual.setStrokeStyle(2,now<e.stunnedUntil?0x00e5ff:0x8866ff);
       if(now<e.stunnedUntil){b.setVelocityX(0);if(e.kind==='drone')b.setVelocityY(0);continue;}
       if(e.kind==='melee')b.setVelocityX(e.object.x>e.x+45?-45:e.object.x<e.x-45?45:b.velocity.x||45);
       if(e.kind==='drone')b.setVelocity(40*Math.cos(now),(e.y+Math.sin(now*2)*28-e.object.y)/dt);

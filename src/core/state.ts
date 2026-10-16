@@ -3,7 +3,7 @@ export type Flow = typeof FLOW[number];
 export class GameplayStateMachine {
   flow: Flow = 'P0';
   transition(next: Flow) {
-    const legal = next === 'P0' || FLOW.indexOf(next) === FLOW.indexOf(this.flow) + 1 || (this.flow === 'P7' && next === 'P4');
+    const legal = next === 'P0' || FLOW.indexOf(next) === FLOW.indexOf(this.flow) + 1 || (this.flow === 'P7' && next === 'P4') || (this.flow === 'P2' && next === 'P1');
     if (!legal) throw new Error(`Illegal flow transition ${this.flow} -> ${next}`);
     this.flow = next;
   }
@@ -28,7 +28,7 @@ export class RunStateManager {
   resume() { if (this.phase === 'paused') this.phase = 'running'; }
   step(dt: number) {
     if (!Number.isFinite(dt) || dt < 0) throw new Error('Invalid delta');
-    if (this.phase !== 'running') return;
+    if (this.phase !== 'running' && this.phase !== 'respawning') return;
     this.elapsed += dt; this.remaining = Math.max(0, this.duration - this.elapsed); this.tick++;
   }
   respawn() { if (this.phase === 'running') this.phase = 'respawning'; }

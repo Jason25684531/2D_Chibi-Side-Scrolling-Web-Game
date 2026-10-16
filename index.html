@@ -2,13 +2,13 @@
 <html lang="zh-Hant">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Experience 3 — Gameplay Foundation</title></head>
 <body>
-  <main><h1>Experience 3 · 灰盒 Gameplay</h1>
-    <p id="rules">TEST ONLY：正式 GDD／Score Table 尚待確認。沒有 Game Over。</p>
+  <main><div id="debug"><h1>Experience 3 · 灰盒 Gameplay</h1>
+    <p id="rules">Development runtime · approved scoring / placeholder characters</p>
     <p>時間：固定 90 秒</p>
     <label>角色<select id="character"><option>aria</option><option>kael</option><option>riven</option></select></label>
     <button id="start">Start / Restart</button><button id="pause">Pause / Resume</button><button id="replay">Replay</button><button id="home">Home</button>
-    <div id="game" aria-label="可用鍵盤或搖桿操作的灰盒遊戲"></div>
+    </div><div id="game" aria-label="可用鍵盤或搖桿操作的灰盒遊戲"></div><div id="debug-info">
     <p>移動 A/D 或 ←/→ · 跳／雙段跳 Space · Dash Shift · Throw J（僅持筆電）· Pause Esc · Home 選單 H（←/→ 選擇、跳鍵確認）<br>Gamepad：D-pad／左搖桿、○ 跳、△ Dash、□ Throw、Start Pause、Back Home 選單。</p>
     <pre id="result" aria-live="polite"></pre>
-  </main><script type="module" src="/src/main.ts"></script>
+  </div></main><script type="module" src="/src/main.ts"></script>
 </body></html>

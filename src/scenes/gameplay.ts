@@ -6,7 +6,7 @@ import { InputAdapter, type Pad } from '../input/adapter';
 import {PlayerController} from '../player/controller';
 import {CharacterView} from '../assets/characters';
 import {stepPhysics} from '../physics/step';
-import {LEVEL,validateLevel} from '../level/data';
+import {LEVEL,TUTORIAL_LEVEL,validateLevel} from '../level/data';
 import {TerrainSystem} from '../terrain/system';
 import {CameraManager} from '../camera/manager';
 import {GameplaySession} from '../core/session';
@@ -30,32 +30,38 @@ export class GameplayScene extends Phaser.Scene {
   pickups:{id:string;kind:'laptop'|'ally';object:Phaser.GameObjects.Rectangle}[]=[];
   goal!:Phaser.GameObjects.Rectangle;powerVersion=0;sizeScale=1;sizeBlocked=false;
   menu=-1;lastMove=0;menuView!:Phaser.GameObjects.Text;menuMask!:Phaser.GameObjects.Rectangle;
+  private frameTime=0;
+  level=LEVEL;
   constructor() { super('Gameplay'); }
-  create() {
-    this.session=new GameplaySession(P.timeTier,sessionStorage.sessionId ??= crypto.randomUUID());this.run=this.session.run;
-    this.flow=new GameplayStateMachine(); this.flow.enterGameplay();
-    this.fixed=new FixedStepController(Number(new URLSearchParams(location.search).get('hz')) === 60 ? 60 : 24);
+  create(data:{duration?:number;sessionId?:string;tutorial?:boolean;flow?:GameplayStateMachine}={}) {
+    this.frameTime=performance.now();
+    this.level=data.tutorial?TUTORIAL_LEVEL:LEVEL;
+    this.session=new GameplaySession(data.duration??P.timeTier,data.sessionId??(sessionStorage.sessionId ??= crypto.randomUUID()),data.tutorial);this.run=this.session.run;
+    this.flow=data.flow??new GameplayStateMachine();if(!data.flow)this.flow.enterGameplay();
+    this.fixed=new FixedStepController(new URLSearchParams(location.search).get('debug')==='1'&&Number(new URLSearchParams(location.search).get('hz')) === 60 ? 60 : 24);
     this.physics.world.fixedStep=false;
     this.inputAdapter=new InputAdapter(P.deadzone); this.inputAdapter.attach();
-    validateLevel(LEVEL);
-    this.physics.world.setBounds(0,0,LEVEL.width,LEVEL.height,true,true,true,false);
-    this.add.rectangle(LEVEL.width/2,LEVEL.height/2,LEVEL.width,LEVEL.height,0x253247);
-    this.player=this.add.rectangle(LEVEL.start.x,LEVEL.start.y,P.bodyWidth,P.bodyHeight,0x4ed8b5).setDepth(5);
+    validateLevel(this.level);
+    this.physics.world.setBounds(0,0,this.level.width,this.level.height,true,true,true,false);
+    this.add.rectangle(this.level.width/2,this.level.height/2,this.level.width,this.level.height,0x253247);
+    this.player=this.add.rectangle(this.level.start.x,this.level.start.y,P.bodyWidth,P.bodyHeight,0x4ed8b5).setDepth(5);
     this.physics.add.existing(this.player); this.body=this.player.body as Phaser.Physics.Arcade.Body;
     this.body.setCollideWorldBounds(true);
     this.controller=new PlayerController(this.body);
-    this.presentation=new CharacterView(this,this.player,(document.querySelector('#character') as HTMLSelectElement).value);
+    this.presentation=new CharacterView(this,this.player,(document.querySelector('#character') as HTMLSelectElement)?.value??'placeholder');
     this.clearInput();
-    this.terrain=new TerrainSystem(this,LEVEL,this.player,()=>this.run.elapsed,()=>{this.controller.bounce();this.session.stats.bounces++;});
-    this.cameraManager=new CameraManager(this.cameras.main,LEVEL.width,LEVEL.height);this.cameraManager.reset(this.player.x,this.player.y);
-    this.respawner=new RespawnManager(this.terrain,LEVEL);
-    this.badges=new BadgeWorld(this,this.session,this.player,LEVEL.badges);
-    this.enemies=new EnemySystem(this,this.session,this.player,LEVEL,this.terrain,cause=>this.takeDamage(cause));
-    this.pickups=LEVEL.powerups.map(p=>{const object=this.add.rectangle(p.x,p.y,24,24,p.kind==='ally'?0xb98cff:0x5ed5f1).setDepth(3);this.add.text(p.x,p.y-30,p.kind,{fontSize:'11px'}).setOrigin(.5);return{...p,object};});
-    this.goal=this.add.rectangle(LEVEL.goal.x,LEVEL.goal.y,45,120,0x82ec7b);this.add.text(LEVEL.goal.x,660,'GOAL',{fontSize:'22px'}).setOrigin(.5);
+    this.terrain=new TerrainSystem(this,this.level,this.player,()=>this.run.elapsed,()=>{this.controller.bounce();this.session.stats.bounces++;});
+    this.cameraManager=new CameraManager(this.cameras.main,this.level.width,this.level.height);this.cameraManager.reset(this.player.x,this.player.y);
+    if(data.tutorial)this.cameras.main.setViewport(290,140,620,240).setScroll(0,600);
+    this.respawner=new RespawnManager(this.terrain,this.level);
+    this.badges=new BadgeWorld(this,this.session,this.player,this.level.badges);
+    this.enemies=new EnemySystem(this,this.session,this.player,this.level,this.terrain,cause=>this.takeDamage(cause));
+    this.pickups=this.level.powerups.map(p=>{const object=this.add.rectangle(p.x,p.y,24,24,p.kind==='ally'?0xb98cff:0x5ed5f1).setDepth(3);this.add.text(p.x,p.y-30,p.kind,{fontSize:'11px'}).setOrigin(.5);return{...p,object};});
+    this.goal=this.add.rectangle(this.level.goal.x,this.level.goal.y,45,120,0x82ec7b);this.add.text(this.level.goal.x,660,'GOAL',{fontSize:'22px'}).setOrigin(.5);
     this.powerVersion=this.session.power.version;this.sizeScale=1;this.sizeBlocked=false;
     document.querySelector('#result')!.textContent='';
     this.hud=this.add.text(16,14,'',{fontSize:'16px',color:'#ffffff'}).setScrollFactor(0).setDepth(100);
+    this.hud.setVisible(!this.registry.get('station'));
     this.menu=-1;this.menuMask=this.add.rectangle(P.width/2,P.height/2,P.width,P.height,0x000000,.8).setScrollFactor(0).setDepth(200).setVisible(false);
     this.menuView=this.add.text(P.width/2,P.height/2,'',{fontSize:'28px',color:'#ffffff',align:'center'}).setOrigin(.5).setScrollFactor(0).setDepth(201);
     this.events.once('shutdown',()=>{ this.inputAdapter.dispose(); this.session.dispose(); });
@@ -83,9 +89,10 @@ export class GameplayScene extends Phaser.Scene {
     else {this.controller.hurtUntil=this.run.elapsed+.25;this.body.setVelocity(-this.controller.facing*120,-150);}
   }
   respawn(cause:string){
-    if(!this.session.respawn(cause))return;
+    const drops=this.session.respawn(cause);if(!drops)return;
     this.resizePlayer(1);const p=this.respawner.position(P.bodyWidth,P.bodyHeight);
     this.body.reset(p.x,p.y);this.controller.reset();this.clearInput();
+    this.badges.scatter(drops,p.x,p.y);
     this.enemies.reset();this.cameraManager.reset(p.x,p.y);this.session.recovered();
   }
   resizePlayer(scale:number){
@@ -103,34 +110,40 @@ export class GameplayScene extends Phaser.Scene {
     this.body.setVelocity(0);this.clearInput();
     this.controller.state=this.session.result.endReason==='goal'?'WIN':'IDLE';
     this.session.power.clear();this.syncPower();this.enemies.clearShots();
-    if(this.flow.flow==='P4'){this.flow.transition('P5');this.flow.transition('P6');}
+    if(!this.registry.get('station')&&this.flow.flow==='P4'){this.flow.transition('P5');this.flow.transition('P6');}
     document.querySelector('#result')!.textContent=JSON.stringify(this.session.result,null,2);
   }
   update(_time: number,delta: number) {
+    const now=performance.now();delta=now-this.frameTime;this.frameTime=now;
     const pad=this.testPad ?? Array.from(navigator.getGamepads?.() ?? []).find(p=>p?.connected);
     const a=this.inputAdapter.sample(pad);
+    const station=this.registry.get('station');
+    if(station?.input(a))return;
     const inMenu=this.updateMenu(a);this.lastMove=a.move;
     this.menuMask.setVisible(this.menu>=0);this.menuView.setText(this.menu<0?'':this.menuOptions().map((o,i)=>i===this.menu?`▶ ${o} ◀`:o).join('\n\n'));
     if(inMenu) return;
     if(a.pause) this.togglePause();
     if(this.run.phase==='running')for(const k of ['jump','dash','throw'] as const)this.pending[k] ||= a[k];
-    if(this.run.phase==='running') this.fixed.update(delta/1000,dt=>{
+    if(this.run.phase==='running') this.fixed.update(delta/1000,(dt,elapsed)=>{
       if(this.run.phase!=='running')return;
-      this.session.tick(dt);if(this.session.result){this.finalize();return;}
+      this.session.tick(elapsed,true);
       this.syncPower();this.controller.update({...a,...this.pending},this.run.elapsed,dt);
       if(this.pending.throw&&this.session.power.throw(this.run.elapsed))this.enemies.shoot(this.player.x,this.player.y,this.controller.facing,'player');
       this.pending={jump:false,dash:false,throw:false};
       this.terrain.update(this.run.elapsed,dt);
       this.enemies.update(dt);
-      stepPhysics(this.physics.world,this.run.elapsed,dt);
+      stepPhysics(this.physics.world,this.run.elapsed,dt,()=>this.terrain.resolveSlopes());
       this.badges.update(dt);
       const bounds=new Phaser.Geom.Rectangle(this.body.x,this.body.y,this.body.width,this.body.height);
       for(const p of this.pickups)if(p.object.active&&Phaser.Geom.Intersects.RectangleToRectangle(bounds,p.object.getBounds())){this.session.activate(p.kind,p.id);p.object.destroy();}
       this.respawner.track(this.player.x,this.player.y,this.body.width,this.body.height,this.body.blocked.down&&this.run.elapsed>=this.controller.dashUntil,this.enemies.dangerAt(this.player.x));
-      if(this.player.y>LEVEL.pitY)this.respawn('pit');
+      if(this.player.y>this.level.pitY)this.respawn('pit');
       // Goal is a full-height gate line: a 6H bounce must not overfly the portal.
       if(this.body.right>=this.goal.getBounds().left){this.session.finish('goal');this.finalize();}
-      this.cameraManager.update(this.player.x,this.player.y,dt);
+      if(!this.session.result&&this.run.remaining===0){this.session.finish('time-up');this.finalize();}
+      if(this.session.result)return;
+      if(this.session.tutorial)this.cameras.main.setScroll(Math.max(0,this.player.x-200),600);
+      else this.cameraManager.update(this.player.x,this.player.y,dt);
     });
     this.presentation.update(this.controller.state,this.controller.facing,this.sizeScale);
     this.hud.setText(`TEST ONLY / ${this.fixed.hz}Hz\n${this.run.phase} · Timer ${this.run.remaining.toFixed(1)}\nBadge ${this.session.badges.held} · Score ${this.session.score.total} · Combo ${this.session.combo.count} ×${this.session.combo.multiplier}\nPower ${this.session.power.kind??'none'}${this.sizeBlocked?' (size blocked)':''}`);

@@ -1,7 +1,7 @@
 import {test,expect} from '@playwright/test';
 test('D1: real Phaser keyboard, simulated gamepad, pause, home and restart',async({page})=>{
   const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
-  await page.goto('/');await page.waitForFunction(()=>!!(window as any).__gameplay?.body?.blocked.down);
+  await page.goto('/?debug=1');await page.waitForFunction(()=>!!(window as any).__gameplay?.body?.blocked.down);
   const x=await page.evaluate(()=>(window as any).__gameplay.player.x);
   await page.keyboard.down('ArrowRight');await page.waitForTimeout(300);await page.keyboard.up('ArrowRight');
   expect(await page.evaluate(()=>(window as any).__gameplay.player.x)).toBeGreaterThan(x+25);
@@ -15,7 +15,7 @@ test('D1: real Phaser keyboard, simulated gamepad, pause, home and restart',asyn
   expect(errors).toEqual([]);
 });
 test('Home key opens the UX p14 menu: pauses, Continue resumes, Restart starts a new Run',async({page})=>{
-  await page.goto('/');await page.waitForFunction(()=>!!(window as any).__gameplay?.body?.blocked.down);
+  await page.goto('/?debug=1');await page.waitForFunction(()=>!!(window as any).__gameplay?.body?.blocked.down);
   await page.keyboard.press('KeyH');await page.waitForFunction(()=>(window as any).__gameplay.menu===0);
   expect(await page.evaluate(()=>(window as any).__gameplay.run.phase)).toBe('paused');
   await page.keyboard.press('Space');await page.waitForFunction(()=>(window as any).__gameplay.run.phase==='running');

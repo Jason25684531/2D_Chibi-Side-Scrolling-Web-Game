@@ -1,0 +1,24 @@
+{
+  "source": "Char_Aassest/collectibles/badge/fecfe8e4-d57f-4100-a528-ef594ecc8ab1.png",
+  "sha256": "d3716b152eb5a48d7a85d0ce7d8c6b715fb4893e767992ef35b20faa83e63bf9",
+  "runtimeUrl": "/assets/collectibles/badge/badge.png",
+  "width": 1254,
+  "height": 1254,
+  "format": "RGBA",
+  "frames": 1,
+  "roles": {
+    "idle": "translation tween",
+    "pickup": "fade and upward translation",
+    "scatter": "bouncing arc without rotation",
+    "hud": "static"
+  },
+  "nominalSheet": {
+    "cell": 128,
+    "padding": 2,
+    "idleFrames": 6,
+    "pickupFrames": 4,
+    "scatterFrames": 4,
+    "fps": 12
+  },
+  "sheetStatus": "not supplied; single PNG fallback approved"
+}

@@ -1,6 +1,6 @@
-﻿import {test,expect} from '@playwright/test';
+import {test,expect} from '@playwright/test';
 test('variable jump, one-way underside/top, bounce and zero-badge safe recovery',async({page})=>{
- await page.goto('/');await page.waitForFunction(()=>(window as any).__gameplay?.body?.blocked.down);
+ await page.goto('/?debug=1');await page.waitForFunction(()=>(window as any).__gameplay?.body?.blocked.down);
  async function jump(hold:number){await page.evaluate(()=>{const s=(window as any).__gameplay;s.body.reset(120,776);s.controller.reset();s.inputAdapter.clear();});let peak=776;await page.keyboard.down('Space');for(let t=0;t<600;t+=40){if(t===hold)await page.keyboard.up('Space');await page.waitForTimeout(40);peak=Math.min(peak,await page.evaluate(()=>(window as any).__gameplay.player.y));}await page.keyboard.up('Space');return peak;}
  const short=await jump(40),long=await jump(560);expect(long).toBeLessThan(short-20);
  await page.evaluate(()=>{const s=(window as any).__gameplay;s.body.reset(570,776);s.controller.reset();});await page.keyboard.down('Space');await page.waitForTimeout(650);await page.keyboard.up('Space');
@@ -13,7 +13,7 @@ test('variable jump, one-way underside/top, bounce and zero-badge safe recovery'
  expect(await page.evaluate(()=>(window as any).__gameplay.terrain.supports((window as any).__gameplay.player.x,(window as any).__gameplay.body.bottom,32))).toBe(true);
 });
 test('Laptop paralysis, enemy side damage, Ally headroom and cleanup',async({page})=>{
- await page.goto('/');await page.waitForFunction(()=>!!(window as any).__gameplay?.enemies);
+ await page.goto('/?debug=1');await page.waitForFunction(()=>!!(window as any).__gameplay?.enemies);
  await page.evaluate(()=>{const s=(window as any).__gameplay;const e=s.enemies.enemies[0];s.body.reset(e.object.x-110,776);s.session.activate('laptop','fixture');});
  await page.keyboard.press('KeyJ');await page.waitForFunction(()=>(window as any).__gameplay.enemies.enemies[0].stunnedUntil>0);
  await page.evaluate(()=>{const s=(window as any).__gameplay;const e=s.enemies.enemies[0];e.stunnedUntil=0;s.session.power.clear();s.session.pickup('fixture-badge');s.body.reset(e.object.x,e.object.y);});await page.waitForTimeout(100);
