@@ -83,3 +83,11 @@ test('Time Up presentation, generating readiness, simulated pad and tiered once-
   await expect(page.locator('[data-screen=P6]')).toBeVisible({timeout:5000});
   expect(await page.evaluate(()=>{const u=(window as any).__station;u.adapter.save(u.result);return{count:u.adapter.records.length,tier:u.result.timeTier,goal:u.result.scoreBreakdown.goal};})).toEqual({count:1,tier:'120',goal:0});
 });
+test('window blur during a station run opens the system menu instead of a silent pause',async({page})=>{
+  await page.goto('/');await page.waitForFunction(()=>!!(window as any).__station?.game.registry.get('assetsReady'));
+  await page.evaluate(()=>{const u=(window as any).__station;u.adapter.enqueue();u.go('P1');u.go('P2');u.go('P3');u.go('P4');u.start();});
+  await page.waitForFunction(()=>(window as any).__gameplay?.run?.phase==='running');
+  await page.evaluate(()=>window.dispatchEvent(new Event('blur')));
+  await expect(page.locator('.modal.screen [data-action=continue]')).toBeFocused();
+  expect(await page.evaluate(()=>(window as any).__gameplay.run.phase)).toBe('paused');
+});

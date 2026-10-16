@@ -62,7 +62,7 @@ export class GameplayScene extends Phaser.Scene {
     document.querySelector('#result')!.textContent='';
     this.hud=this.add.text(16,14,'',{fontSize:'16px',color:'#ffffff'}).setScrollFactor(0).setDepth(100);
     this.hud.setVisible(!this.registry.get('station'));
-    this.menu=-1;this.menuMask=this.add.rectangle(P.width/2,P.height/2,P.width,P.height,0x000000,.8).setScrollFactor(0).setDepth(200).setVisible(false);
+    this.menu=-1;this.lastMove=0;this.menuMask=this.add.rectangle(P.width/2,P.height/2,P.width,P.height,0x000000,.8).setScrollFactor(0).setDepth(200).setVisible(false);
     this.menuView=this.add.text(P.width/2,P.height/2,'',{fontSize:'28px',color:'#ffffff',align:'center'}).setOrigin(.5).setScrollFactor(0).setDepth(201);
     this.events.once('shutdown',()=>{ this.inputAdapter.dispose(); this.session.dispose(); });
     (window as any).__gameplay=this;
@@ -146,6 +146,7 @@ export class GameplayScene extends Phaser.Scene {
       else this.cameraManager.update(this.player.x,this.player.y,dt);
     });
     this.presentation.update(this.controller.state,this.controller.facing,this.sizeScale);
-    this.hud.setText(`TEST ONLY / ${this.fixed.hz}Hz\n${this.run.phase} · Timer ${this.run.remaining.toFixed(1)}\nBadge ${this.session.badges.held} · Score ${this.session.score.total} · Combo ${this.session.combo.count} ×${this.session.combo.multiplier}\nPower ${this.session.power.kind??'none'}${this.sizeBlocked?' (size blocked)':''}`);
+    // Station mode hides the Phaser HUD; skip re-rasterising its text every frame.
+    if(this.hud.visible)this.hud.setText(`TEST ONLY / ${this.fixed.hz}Hz\n${this.run.phase} · Timer ${this.run.remaining.toFixed(1)}\nBadge ${this.session.badges.held} · Score ${this.session.score.total} · Combo ${this.session.combo.count} ×${this.session.combo.multiplier}\nPower ${this.session.power.kind??'none'}${this.sizeBlocked?' (size blocked)':''}`);
   }
 }
