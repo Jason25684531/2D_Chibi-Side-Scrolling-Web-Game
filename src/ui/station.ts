@@ -4,14 +4,16 @@ import {InputAdapter,type Actions,type Pad} from '../input/adapter';
 import type {GameplayScene} from '../scenes/gameplay';
 import type {GameplayResult} from '../core/session';
 import {MockStation,titles} from './mock-station';
-import {avatar,button,panel,escape,focus,text,badgeIcon,time} from './components';
+import {avatar,button,panel,escape,focus,text,time,characterIds,stat} from './components';
 import './station.css';
+import {hud,updateHud} from './hud';
 
 export class StationUI {
   flow=new GameplayStateMachine();adapter=new MockStation();inputAdapter=new InputAdapter();
   tier=90;entered=performance.now();countdownAt=0;menu=false;lastMove=0;testPad:Pad|null=null;
   root:HTMLElement;ui:HTMLElement;progress=new Set<string>();private previous=performance.now();
   result:GameplayResult|null=null;standbyPage=-1;
+  boardOpen=false;rankPage=0;private returnFocus:string|undefined;
   constructor(readonly game:Phaser.Game){
     document.body.classList.add('station');
     this.root=document.createElement('div');this.root.id='station-root';
@@ -19,42 +21,62 @@ export class StationUI {
     document.body.append(this.root);this.root.append(document.querySelector('#game')!,this.ui);
     game.registry.set('station',this);this.inputAdapter.attach();
     this.ui.addEventListener('click',event=>{const b=(event.target as HTMLElement).closest<HTMLButtonElement>('button');if(b&&!b.disabled)this.act(b.dataset.action!);});
+    this.ui.addEventListener('input',event=>{const input=event.target as HTMLInputElement;if(input.id==='nickname'&&this.adapter.current)this.adapter.current.nickname=input.value;});
+    this.ui.addEventListener('focusin',event=>{
+      if(event.target instanceof HTMLInputElement)for(const a of [this.inputAdapter,this.scene.inputAdapter]){a?.codes.clear();a?.previous.clear();a?.clear();}
+    });
+    this.ui.addEventListener('keydown',event=>{
+      if(event.key!=='Tab')return;
+      const scope=this.ui.querySelector('.modal.screen')??this.ui;
+      const nodes=Array.from(scope.querySelectorAll<HTMLElement>('button:not(:disabled),input:not(:disabled)'));
+      if(!nodes.length)return;
+      event.preventDefault();const i=nodes.indexOf(document.activeElement as HTMLElement);
+      nodes[(i+(event.shiftKey?-1:1)+nodes.length)%nodes.length].focus();
+    });
     const resize=()=>{this.root.style.transform=`translate(-50%,-50%) scale(${Math.min(innerWidth/1920,innerHeight/1080)})`;};resize();window.addEventListener('resize',resize);
     game.events.on('poststep',this.update,this);
     game.events.once('destroy',()=>{this.inputAdapter.dispose();window.removeEventListener('resize',resize);game.events.off('poststep',this.update,this);});
     this.render();(window as any).__station=this;
   }
   get scene(){return this.game.scene.getScene('Gameplay') as GameplayScene;}
-  go(next:Flow){this.flow.transition(next);this.entered=performance.now();this.countdownAt=0;this.render();}
+  go(next:Flow){this.flow.transition(next);this.entered=performance.now();this.countdownAt=0;this.boardOpen=false;this.rankPage=0;this.render();}
   start(tutorial=false){
     this.inputAdapter.dispose();this.progress.clear();
-    const data={duration:this.tier,sessionId:this.adapter.current!.sessionId,tutorial,flow:this.flow};
+    const data={duration:this.tier,sessionId:this.adapter.current!.sessionId,characterId:this.adapter.current!.characterId,tutorial,flow:this.flow};
     if(this.game.scene.isActive('Gameplay'))this.scene.scene.restart(data);else this.game.scene.start('Gameplay',data);
   }
   stop(){if(this.game.scene.isActive('Gameplay'))this.game.scene.stop('Gameplay');this.inputAdapter.attach();}
   exit(){this.menu=false;this.stop();this.adapter.exit();this.go('P0');if(this.adapter.current)this.go('P1');}
   act(action:string){
     if(this.countdownAt&&this.flow.flow==='P7'&&!this.menu)return;
-    if(action==='demo'){this.adapter.enqueue();this.go('P1');}
-    if(action==='ready'&&this.adapter.current?.assetState!=='generating'){this.tier=90;this.go('P2');}
-    if(action.startsWith('tier-')){this.tier=Number(action.slice(5));this.go('P3');if(this.game.registry.get('assetsReady'))this.start(true);}
-    if(action==='continue'){this.menu=false;this.scene.run?.resume();this.scene.fixed?.reset();this.render();}
+    if(action==='demo'&&this.flow.flow==='P0'){this.adapter.enqueue();this.go('P1');}
+    if(action.startsWith('character-')&&this.flow.flow==='P1'){
+      const id=action.slice(10);if(characterIds.includes(id as typeof characterIds[number])){this.adapter.current.characterId=id;this.render();focus(this.ui,0,action);}return;
+    }
+    if(action==='ready'&&this.flow.flow==='P1'&&this.adapter.current?.assetState!=='generating'){this.adapter.current.nickname=this.adapter.current.nickname.trim().slice(0,24)||'Future Gamer';this.tier=90;this.go('P2');}
+    if(action.startsWith('tier-')&&this.flow.flow==='P2'){const tier=Number(action.slice(5));if(![60,90,120].includes(tier))return;this.tier=tier;this.go('P3');if(this.game.registry.get('assetsReady'))this.start(true);}
+    if(action==='continue'){this.menu=false;this.scene.run?.resume();this.scene.fixed?.reset();this.render();focus(this.ui,0,this.returnFocus);}
     if(action==='restart'&&this.flow.flow==='P4'){this.menu=false;this.start();this.render();}
     if(action==='exit')this.exit();
-    if(action==='result')this.go('P7');
+    if(action==='result'&&this.flow.flow==='P6')this.go('P7');
+    if(action==='goal-retry'&&this.flow.flow==='P5'&&this.adapter.replayEnabled){this.go('P6');this.go('P7');this.act('replay');return;}
+    if(action==='ranking'&&['P6','P7'].includes(this.flow.flow)){if(this.flow.flow==='P6')this.go('P7');this.boardOpen=true;this.rankPage=0;this.render();return;}
+    if(action==='close-ranking'){this.boardOpen=false;this.render();focus(this.ui,0,'ranking');}
+    if(action.startsWith('page-')){this.rankPage=Number(action.slice(5))===1?1:0;this.render();focus(this.ui,0,action);}
+    if(action==='retry-storage'){this.adapter.retryStorage();this.render();}
+    if(action==='settings-replay'&&this.menu&&this.flow.flow==='P0'){this.adapter.replayEnabled=!this.adapter.replayEnabled;this.render();focus(this.ui,0,action);}
     if(action==='replay'&&this.adapter.replayEnabled&&this.flow.flow==='P7'){this.countdownAt=performance.now();this.render();}
   }
   input(a:Actions){
-    if(a.home||a.pause){this.menu=!this.menu;if(this.menu)this.scene.run?.pause();else this.scene.run?.resume();this.scene.fixed?.reset();this.render();return true;}
-    if(a.back&&this.menu){this.menu=false;this.scene.run?.resume();this.scene.fixed?.reset();this.render();return true;}
+    if(document.activeElement instanceof HTMLInputElement)return true;
+    if(a.home||a.pause){if(!this.menu)this.returnFocus=(document.activeElement as HTMLElement)?.dataset.action;this.menu=!this.menu;if(this.menu)this.scene.run?.pause();else this.scene.run?.resume();this.scene.fixed?.reset();this.render();if(!this.menu)focus(this.ui,0,this.returnFocus);return true;}
+    if(a.back&&this.menu){this.act('continue');return true;}
+    if(a.back&&this.boardOpen){this.act('close-ranking');return true;}
     if(this.flow.flow==='P7'&&this.countdownAt&&!this.menu)return true;
-    if(this.flow.flow==='P3'){
-      if(a.move)this.progress.add('移動');if(a.jump)this.progress.add('跳躍');if(a.dash)this.progress.add('衝刺');if(a.throw)this.progress.add('投擲');
-    }
     const gameplay=(this.flow.flow==='P3'||this.flow.flow==='P4')&&!this.menu;
     if(!gameplay){
       if(a.move&&(a.movePressed||a.move!==this.lastMove))focus(this.ui.querySelector<HTMLElement>('.modal.screen')??this.ui,a.move);
-      if(a.confirm||a.jump)(document.activeElement as HTMLButtonElement)?.click();
+      if((a.confirm||a.jump)&&this.ui.contains(document.activeElement))(document.activeElement as HTMLButtonElement)?.click();
       if(a.back&&this.flow.flow==='P2'&&!this.menu)this.go('P1');
     }
     this.lastMove=a.move;return !gameplay;
@@ -74,16 +96,31 @@ export class StationUI {
       if(loaded&&!this.game.scene.isActive('Gameplay'))this.start(true);
       const progress=this.ui.querySelector<HTMLProgressElement>('progress');if(progress)progress.value=this.game.registry.get('loadProgress')??0;
       text(this.ui,'loading',loaded?'所需遊戲素材已載入':this.game.registry.get('loadError')?'素材載入失敗':'載入中');
-      if(this.game.scene.isActive('Gameplay')){const s=this.scene;if(s.session.badges.held)this.progress.add('徽章');if(s.enemies.enemies.some(e=>e.defeated))this.progress.add('踩擊');if(s.session.power.kind==='laptop')this.progress.add('筆電');if(s.controller.jumps===2)this.progress.add('雙段跳');}
+      if(this.game.scene.isActive('Gameplay')){
+        const s=this.scene;
+        if(Math.abs(s.body.velocity.x)>1)this.progress.add('移動');
+        if(s.controller.state==='JUMP')this.progress.add('跳躍');
+        if(s.controller.state==='DASH')this.progress.add('衝刺');
+        if(s.session.power.throwReady>0)this.progress.add('投擲');
+        if(s.session.badges.held)this.progress.add('徽章');
+        if(s.enemies.enemies.some(e=>e.defeated))this.progress.add('踩擊');
+        if(s.session.power.kind==='laptop')this.progress.add('筆電');
+        if(s.controller.jumps===2)this.progress.add('雙段跳');
+        if(s.session.stats.bounces)this.progress.add('彈跳板');
+      }
+      let active=false;
+      for(const node of this.ui.querySelectorAll<HTMLElement>('[data-lesson]')){
+        const complete=this.progress.has(node.dataset.lesson!);
+        const state=complete?'completed':!active?'active':'not-started';if(!complete)active=true;
+        node.dataset.state=state;const label=node.querySelector('.lesson-state')!;label.textContent=complete?'✓ 完成':state==='active'?'練習中':'尚未開始';
+      }
       text(this.ui,'tutorial-progress',[...this.progress].join(' · ')||'試試移動、跳躍與衝刺');
       if(loaded&&now-this.entered>=8000&&!this.countdownAt)this.countdownAt=now;
       if(this.countdownAt){text(this.ui,'countdown',Math.max(1,Math.ceil((3000-now+this.countdownAt)/1000)));if(now-this.countdownAt>=3000){this.go('P4');this.start();}}
     }
     if(this.flow.flow==='P4'){
       const s=this.scene.session;if(!s)return;
-      text(this.ui,'hud-badges',s.badges.held);text(this.ui,'hud-time',time(s.run.remaining));text(this.ui,'hud-score',s.score.total);
-      text(this.ui,'hud-combo',s.combo.count>=2?`COMBO ${s.combo.count} ×${s.combo.multiplier}`:'');
-      text(this.ui,'hud-power',s.power.kind==='ally'?`ROG ALLY ${Math.ceil(Math.max(0,s.power.expires-s.run.elapsed))}s`:s.power.kind==='laptop'?'LAPTOP ⚡ J 投擲':'');
+      updateHud(this.ui,s,this.scene.level.badges.length);
       if(s.result){
         this.result=s.result;this.adapter.save(s.result);this.scene.finalize();
         if(s.result.endReason==='time-up'&&!this.scene.body.blocked.down){const p=this.scene.respawner.position(this.scene.body.width,this.scene.body.height);this.scene.body.reset(p.x,p.y);this.scene.presentation.update('IDLE',1,1);}
@@ -95,30 +132,36 @@ export class StationUI {
   }
   ranking(full=false,tier=this.tier){
     const rows=this.adapter.board(tier),mine=rows.findIndex(r=>r.runId===this.result?.runId);
-    const indices=full?Array.from({length:20},(_,i)=>i):[...new Set([0,1,2,3,4,...(mine>=0?[mine-1,mine,mine+1]:[])])].filter(i=>i>=0&&i<rows.length).sort((a,b)=>a-b);
-    return `<div class="ranking ${full?'two':''}">${indices.map(i=>{const r=rows[i];return `<div class="rank-row ${r?.runId===this.result?.runId?'you':''}"><b>${i+1}</b><span>${r?escape(r.nickname):'—'}</span><em>${r?r.score:'—'}</em></div>`;}).join('')||'<p>此檔位尚無成績</p>'}</div>`;
+    const indices=full?Array.from({length:Math.max(0,Math.min(10,Math.min(rows.length,20)-this.rankPage*10))},(_,i)=>i+this.rankPage*10):[...new Set([0,1,2,3,4,...(mine>=0?[mine-1,mine,mine+1]:[])])].filter(i=>i>=0&&i<rows.length).sort((a,b)=>a-b);
+    const status=this.adapter.storageStatus==='loading'?'<p role="status">載入本機成績中…</p>':this.adapter.storageStatus==='error'?`<div class="storage-error" role="alert">${escape(this.adapter.storageError)}${button('retry-storage','重試保存','RETRY')}</div>`:'';
+    return `${status}<div class="ranking ${full?'full-ranking':''}">${indices.map(i=>{const r=rows[i];return `<div class="rank-row ${r.runId===this.result?.runId?'you':''}" ${r.runId===this.result?.runId?'aria-current="true"':''}><b>${String(i+1).padStart(2,'0')}</b><span title="${escape(r.nickname)}">${escape(r.nickname)}</span><em>${r.score.toLocaleString()}</em></div>`;}).join('')||(this.adapter.storageStatus==='ready'?'<p class="empty-state">此檔位尚無成績<br><small>完成挑戰，留下你的第一筆紀錄。</small></p>':'')}</div>`;
+  }
+  leaderboard(){
+    const rows=this.adapter.board(this.tier).slice(0,20);
+    return `<div class="leaderboard-layout"><div class="podium">${rows.slice(0,3).map((r,i)=>`<section class="podium-card rank-${i+1}"><span class="podium-rank">0${i+1}</span>${avatar(r.characterId)}<h2 title="${escape(r.nickname)}">${escape(r.nickname)}</h2><strong>${r.score.toLocaleString()}</strong><small>POINTS / ${this.tier}s</small></section>`).join('')||'<div class="podium-empty">THE NEXT LEGEND<br><span>下一個紀錄，由你創造。</span></div>'}</div>${panel(`TOP 20 / ${this.tier} 秒`,this.ranking(true)+`<div class="pagination">${button('page-0','第 1 頁','01 — 10',this.rankPage===0)}${button('page-1','第 2 頁','11 — 20',rows.length<=10||this.rankPage===1)}</div>`,'leaderboard-table')}</div>`;
   }
   shell(title:string,en:string,body:string,classes=''){
-    return `<div class="screen ${classes}" data-screen="${this.flow.flow}"><div class="brand">ROG / FUTURE GAMER</div><h1>${title}</h1><div class="eyebrow">${en}</div>${body}<div class="footer"><span>← → 選擇　ENTER / SPACE 確認　BACKSPACE 返回　H 選單</span><span>本機示範資料 · MOCK</span></div></div>`;
+    return `<div class="screen ${classes}" data-screen="${this.flow.flow}"><div class="brand">ROG / FUTURE GAMER</div><h1>${title}</h1><div class="eyebrow">${en}</div>${body}<div class="footer"><span>← → 選擇　ENTER / SPACE 確認　BACKSPACE 返回　H 選單</span><span>本機成績 · 示範排隊</span></div></div>`;
   }
   render(){
-    const nickname=escape(this.adapter.current?.nickname??'Future Gamer');let body='';
+    const nickname=escape(this.adapter.current?.nickname??'Future Gamer'),character=this.adapter.current?.characterId??'aria';let body='';
     switch(this.flow.flow){
       case 'P0':body=this.shell('FOR THOSE WHO DARE','FUTURE GAMER / 待機牆',`${this.standbyPage<0?`<div class="wall">${[...this.adapter.wall.values()].map(r=>panel(escape(r.nickname),avatar()+`<p>${escape(r.titles[0])}</p>`)).join('')||panel('成為下一位 Future Gamer',avatar()+'<p>目前沒有玩家排隊</p>')}</div>`:panel(`TOP 20 / ${[60,90,120][this.standbyPage]} 秒`,this.ranking(true,[60,90,120][this.standbyPage]))}<div class="actions">${button('demo','加入示範佇列','DEMO QUEUE')}</div>`);break;
-      case 'P1':body=this.shell('準備開始','READY TO PLAY',`<div class="hero">${avatar()}<h2>${nickname}</h2><p id="readiness">角色備援模式</p>${button('ready','開始','START',this.adapter.current?.assetState==='generating')}</div>`);break;
+      case 'P1':body=this.shell('選擇你的角色','CHOOSE YOUR FUTURE',`<div class="selection-layout"><div><div class="character-grid">${characterIds.map((id,i)=>`<button class="character-card ${character===id?'selected':''}" aria-pressed="${character===id}" data-action="character-${id}"><span class="card-index">0${i+1}</span>${avatar(id)}<strong>${id.toUpperCase()}</strong><small>${character===id?'已選擇 / SELECTED':'可用 / AVAILABLE'}</small></button>`).join('')}<button class="character-card locked" disabled><span class="card-index">04</span><span class="lock-symbol">＋</span><strong>LOCKED</strong><small>尚未開放</small></button></div><label class="name-label" for="nickname">玩家名稱 / PLAYER NAME</label><input id="nickname" maxlength="24" autocomplete="off" value="${nickname}"><p id="readiness">角色備援模式</p></div><div class="character-hero"><span class="hero-ring"></span>${avatar(character)}<div class="hero-name">${character.toUpperCase()}</div><span class="hero-caption">YOUR NEXT CHAPTER STARTS HERE</span></div></div><div class="selection-action">${button('ready','開始任務','START MISSION',this.adapter.current?.assetState==='generating')}</div>`);break;
       case 'P2':body=this.shell('選擇遊玩時間','SELECT YOUR TIME',`<div class="triple">${[60,90,120].map((t,i)=>`<button class="tier" data-action="tier-${t}"><strong>${['挑戰','標準','休閒'][i]}</strong><span>${['熟練玩家','一般玩家 · 預設','新手 · 親子'][i]}</span><span class="big-score">${t}<small>秒 / SECONDS</small></span></button>`).join('')}</div>`);break;
-      case 'P3':body=this.shell('新手訓練場','TUTORIAL SANDBOX',`<div class="columns">${panel(nickname,avatar()+'<p id="loading">載入中</p><progress class="progress" max="1" value="0"></progress>')}<div class="tutorial-window"></div></div><div class="controls">← → 移動　 SPACE 跳躍／雙段跳　 SHIFT 衝刺　 J 閃電</div><p id="tutorial-progress"></p><div id="countdown" class="countdown"></div>`,'tutorial');break;
-      case 'P4':body=`<div class="screen transparent" data-screen="P4"><div class="hud">${panel('BADGE / 徽章',badgeIcon()+' <strong id="hud-badges">0</strong>')}${panel('TIME LEFT / 剩餘時間','<strong id="hud-time"></strong>','timer')}${panel('SCORE / 分數','<strong id="hud-score">0</strong>')}</div><div class="hud-side" id="hud-combo"></div><div class="hud-side hud-power" id="hud-power"></div></div>`;break;
-      case 'P5':body=this.shell('','',`<h1 class="end-title">${this.result?.endReason==='goal'?'通關！':'時間到！'}</h1><div class="hero"><h2>${this.result?.endReason==='goal'?'STAGE CLEAR':'TIME UP'}</h2>${avatar()}</div>`);break;
+      case 'P3':body=this.shell('新手訓練場','TRAINING / SYSTEM INITIALIZATION',`<div class="columns">${panel(nickname,avatar(character)+'<p id="loading" role="status">載入中</p><progress class="progress" aria-label="素材載入進度" max="1" value="0"></progress>')}<div class="tutorial-window"><span>LIVE TRAINING / 自由練習</span></div></div><div class="lesson-grid">${[['移動','MOVE','← → / A D'],['跳躍','JUMP','SPACE / ↑'],['雙段跳','DOUBLE JUMP','SPACE ×2'],['衝刺','DASH','SHIFT'],['投擲','THROW','持筆電時 J'],['踩擊','ENEMY','跳躍踩敵'],['徽章','BADGE','接觸收集'],['筆電','LAPTOP','接觸取得'],['彈跳板','BOUNCE PAD','站上彈起']].map(([zh,en,key])=>`<div class="lesson" data-lesson="${zh}"><b>${en}</b><span>${key}</span><small class="lesson-state">尚未開始</small></div>`).join('')}</div><p id="tutorial-progress"></p><div id="countdown" class="countdown"></div>`,'tutorial');break;
+      case 'P4':body=hud();break;
+      case 'P5':body=this.shell('','',`<div class="mission-layout"><div class="mission-art">${avatar(character)}<h1 class="end-title">${this.result?.endReason==='goal'?'GOAL!':'TIME UP'}</h1><h2>${this.result?.endReason==='goal'?'MISSION CLEAR / 任務完成':'時間到！ / 挑戰結束'}</h2></div>${panel('MISSION REPORT',stat('分數',this.result?.score??0)+stat('持有徽章',this.result?.heldBadgeCount??0)+stat('最高連擊',this.result?.playerStatistics.maxCombo??0)+`<p class="gold">${this.result?escape(titles(this.result)[0]):''}</p><p>即將進入本場結果</p>`)}</div><div class="actions">${button('goal-retry','再挑戰','RETRY',!this.adapter.replayEnabled)}${button('next-stage','下一關','COMING SOON',true)}${button('exit','返回選單','BACK TO MENU')}</div>`,'mission');break;
       case 'P6':{
         const r=this.result!,s=r.playerStatistics,t= titles(r);
-        const stat=(label:string,value:unknown)=>`<div class="stat"><span>${label}</span><strong>${value}</strong></div>`;
-        body=this.shell('本場結果','BATTLE RESULT',`<div class="result-columns">${panel('戰鬥數據 / STATISTICS',stat('持有徽章',r.heldBadgeCount)+stat('擊敗敵人',s.kills)+stat('最高連擊',s.maxCombo)+stat(r.endReason==='goal'?'通關時間':'遊玩時間',time(r.duration-r.remainingTime))+stat('彈跳次數',s.bounces)+stat('獨立麻痺敵人',s.paralyses))}${panel('YOUR SCORE',`<div class="big-score">${r.score}</div>${Object.entries(r.scoreBreakdown).map(([k,v])=>stat(({enemy:'敵人（含 Combo）',badges:'持有徽章 ×10',goal:'通關',time:'剩餘時間',noDrop:'零掉落通關'} as Record<string,string>)[k],`+${v}`)).join('')}<p class="gold">${t.slice(0,3).map(escape).join(' · ')}${t.length>3?' +'+(t.length-3):''}</p>`,'red')}${panel(`排行榜 / ${this.tier} 秒`,this.ranking()+`<p>角色牆已更新 · 今日第 ${this.adapter.wall.size} 位</p><small>本機示範資料</small>`)}</div><div class="actions">${button('result','繼續','CONTINUE')}</div>`);break;
+        body=this.shell('本場結果','BATTLE RESULT / MISSION DEBRIEF',`<div class="result-columns">${panel('戰鬥數據 / STATISTICS',`<div class="result-avatar">${avatar(character)}<span>${nickname}</span></div>`+stat('持有徽章',r.heldBadgeCount)+stat('擊敗敵人',s.kills)+stat('最高連擊',s.maxCombo)+stat(r.endReason==='goal'?'通關時間':'遊玩時間',time(r.duration-r.remainingTime))+stat('彈跳次數',s.bounces)+stat('獨立麻痺敵人',s.paralyses))}${panel('YOUR SCORE',`<div class="result-verdict">${r.endReason==='goal'?'CLEAR':'FINISHED'}</div><div class="big-score">${r.score}</div>${Object.entries(r.scoreBreakdown).map(([k,v])=>stat(({enemy:'敵人（含 Combo）',badges:'持有徽章 ×10',goal:'通關',time:'剩餘時間',noDrop:'零掉落通關'} as Record<string,string>)[k],`+${v}`)).join('')}<p class="gold">${t.slice(0,3).map(escape).join(' · ')}${t.length>3?' +'+(t.length-3):''}</p>`,'red')}${panel(`排行榜 / ${this.tier} 秒`,this.ranking()+`<p>角色牆已更新 · ${this.adapter.wall.size} 位</p><small>本機成績</small>`)}</div><div class="actions">${button('ranking','完整排行','TOP 20')}${button('result','繼續','CONTINUE')}</div>`);break;
       }
-      case 'P7':body=this.shell('再來一場？','PLAY AGAIN?',panel(`TOP 20 / ${this.tier} 秒`,this.ranking(true))+`<div class="actions">${button('replay','再玩一場','PLAY AGAIN',!this.adapter.replayEnabled||!!this.countdownAt)}${button('exit','結束','FINISH')}</div><p>下一位：${escape(this.adapter.queue[1]?.nickname??'目前無玩家等待')}</p>${this.countdownAt?'<div class="modal"><div id="countdown" class="countdown">3</div></div>':''}`);break;
+      case 'P7':
+        body=this.boardOpen?this.shell('榮耀排行榜','TOP 20 / LOCAL RECORDS',this.leaderboard()+`<div class="actions">${button('close-ranking','返回','BACK')}</div>`,'board-screen'):
+          this.shell('再來一場？','PLAY AGAIN?',`<div class="replay-layout"><div class="replay-character">${avatar(character)}</div>${panel('YOUR NEXT RUN',`<div class="replay-title">突破你的<br><span>下一個紀錄。</span></div><p>${nickname} · ${this.tier} 秒挑戰</p><div class="actions">${button('replay','再玩一場','PLAY AGAIN',!this.adapter.replayEnabled||!!this.countdownAt)}${button('exit','結束','FINISH')}</div><div class="replay-secondary">${button('ranking','查看排行榜','TOP 20')}</div>`,'replay-panel')}</div><div class="next-player"><span>NEXT PLAYER / 下一位</span><strong>${escape(this.adapter.queue[1]?.nickname??'目前無玩家等待')}</strong></div>${this.countdownAt?'<div class="modal" role="status"><div id="countdown" class="countdown">3</div></div>':''}`,'replay-screen');break;
       default:body=this.shell('','', '', 'transparent');
     }
-    if(this.menu)body+=`<div class="modal screen"><div class="panel"><h2>系統選單</h2>${['P3','P4','P5','P6','P7'].includes(this.flow.flow)?button('continue','繼續','CONTINUE'):''}${this.flow.flow==='P4'?button('restart','重新開始','RESTART'):''}${button('exit','回到主畫面','HOME')}</div></div>`;
-    this.ui.innerHTML=body;focus(this.ui.querySelector<HTMLElement>('.modal.screen')??this.ui,0,this.menu?'continue':this.flow.flow==='P2'?'tier-90':this.flow.flow==='P7'?'exit':undefined);
+    if(this.menu)body+=`<div class="modal screen" role="dialog" aria-modal="true" aria-label="系統選單"><div class="panel"><h2>系統選單</h2>${['P3','P4','P5','P6','P7'].includes(this.flow.flow)?button('continue','繼續','CONTINUE'):''}${this.flow.flow==='P4'?button('restart','重新開始','RESTART'):''}${button('exit','回到主畫面','HOME')}${this.flow.flow==='P0'?button('settings-replay',`再挑戰：${this.adapter.replayEnabled?'開啟':'關閉'}`,'REPLAY SETTING'):''}</div></div>`;
+    this.ui.innerHTML=body;focus(this.ui.querySelector<HTMLElement>('.modal.screen')??this.ui,0,this.menu?'continue':this.flow.flow==='P1'?'ready':this.flow.flow==='P2'?'tier-90':this.flow.flow==='P6'?'result':this.flow.flow==='P7'?'exit':undefined);
   }
 }

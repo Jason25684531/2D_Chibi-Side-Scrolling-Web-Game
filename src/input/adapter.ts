@@ -7,7 +7,16 @@ export class InputAdapter {
   previous = new Set<Action>();
   private pending = new Set<Action>();
   readonly codes = new Set<string>();
-  private keyDown = (e: KeyboardEvent) => { const action=KEYS[e.code]; if (action) { if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement)return;e.preventDefault();if(e.repeat)return;if(!Array.from(this.codes).some(code=>KEYS[code]===action))this.pending.add(action);this.codes.add(e.code); } };
+  private keyDown = (e: KeyboardEvent) => {
+    const action=KEYS[e.code];
+    if(!action||e.isComposing||e.target instanceof HTMLInputElement||e.target instanceof HTMLSelectElement||e.target instanceof HTMLTextAreaElement)return;
+    e.preventDefault();if(e.repeat)return;
+    // Activate the focused button now: a render before the next frame can move
+    // focus from Replay to Exit. Queuing only "confirm" would click that new target.
+    if(e.target instanceof HTMLButtonElement&&(action==='confirm'||action==='jump')){e.target.click();return;}
+    if(!Array.from(this.codes).some(code=>KEYS[code]===action))this.pending.add(action);
+    this.codes.add(e.code);
+  };
   private keyUp = (e: KeyboardEvent) => { if(KEYS[e.code]&&!(e.target instanceof HTMLInputElement)&&!(e.target instanceof HTMLSelectElement))e.preventDefault();this.codes.delete(e.code); };
   private blur = () => {this.codes.clear();this.previous.clear();this.pending.clear();};
   constructor(readonly deadzone = 0.22) {}

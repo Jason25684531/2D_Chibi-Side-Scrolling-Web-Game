@@ -3,6 +3,6 @@ import {preloadCharacters} from '../assets/characters';
 import badge from '../../assets/badge-manifest.json';
 export class PreloadScene extends Phaser.Scene {
   constructor() { super('Preload'); }
-  preload() {preloadCharacters(this);this.load.on('progress',(value:number)=>this.registry.set('loadProgress',value));this.load.on('loaderror',()=>this.registry.set('loadError',true));this.load.image('badge',badge.runtimeUrl);}
+  preload() {preloadCharacters(this);this.load.on('progress',(value:number)=>this.registry.set('loadProgress',value));this.load.on('loaderror',()=>this.registry.set('loadError',true));this.load.image('badge',badge.runtimeUrl);this.load.image('enemy-dog','/assets/ui/enemy-dog.png');}
   create() {this.registry.set('assetsReady',!this.registry.get('loadError'));if(new URLSearchParams(location.search).get('debug')==='1')this.scene.start('Gameplay');}
 }

@@ -13,6 +13,7 @@ import {GameplaySession} from '../core/session';
 import {BadgeWorld} from '../badge/world';
 import {RespawnManager} from '../respawn/manager';
 import {EnemySystem} from '../enemy/system';
+import {laboratory} from '../assets/laboratory';
 export class GameplayScene extends Phaser.Scene {
   run!: RunStateManager;
   flow!: GameplayStateMachine;
@@ -33,7 +34,7 @@ export class GameplayScene extends Phaser.Scene {
   private frameTime=0;
   level=LEVEL;
   constructor() { super('Gameplay'); }
-  create(data:{duration?:number;sessionId?:string;tutorial?:boolean;flow?:GameplayStateMachine}={}) {
+  create(data:{duration?:number;sessionId?:string;characterId?:string;tutorial?:boolean;flow?:GameplayStateMachine}={}) {
     this.frameTime=performance.now();
     this.level=data.tutorial?TUTORIAL_LEVEL:LEVEL;
     this.session=new GameplaySession(data.duration??P.timeTier,data.sessionId??(sessionStorage.sessionId ??= crypto.randomUUID()),data.tutorial);this.run=this.session.run;
@@ -43,12 +44,12 @@ export class GameplayScene extends Phaser.Scene {
     this.inputAdapter=new InputAdapter(P.deadzone); this.inputAdapter.attach();
     validateLevel(this.level);
     this.physics.world.setBounds(0,0,this.level.width,this.level.height,true,true,true,false);
-    this.add.rectangle(this.level.width/2,this.level.height/2,this.level.width,this.level.height,0x253247);
+    this.add.rectangle(this.level.width/2,this.level.height/2,this.level.width,this.level.height,0x060b1c).setDepth(-100);
     this.player=this.add.rectangle(this.level.start.x,this.level.start.y,P.bodyWidth,P.bodyHeight,0x4ed8b5).setDepth(5);
     this.physics.add.existing(this.player); this.body=this.player.body as Phaser.Physics.Arcade.Body;
     this.body.setCollideWorldBounds(true);
     this.controller=new PlayerController(this.body);
-    this.presentation=new CharacterView(this,this.player,(document.querySelector('#character') as HTMLSelectElement)?.value??'placeholder');
+    this.presentation=new CharacterView(this,this.player,data.characterId??(document.querySelector('#character') as HTMLSelectElement)?.value??'aria');
     this.clearInput();
     this.terrain=new TerrainSystem(this,this.level,this.player,()=>this.run.elapsed,()=>{this.controller.bounce();this.session.stats.bounces++;});
     this.cameraManager=new CameraManager(this.cameras.main,this.level.width,this.level.height);this.cameraManager.reset(this.player.x,this.player.y);
@@ -58,6 +59,7 @@ export class GameplayScene extends Phaser.Scene {
     this.enemies=new EnemySystem(this,this.session,this.player,this.level,this.terrain,cause=>this.takeDamage(cause));
     this.pickups=this.level.powerups.map(p=>{const object=this.add.rectangle(p.x,p.y,24,24,p.kind==='ally'?0xb98cff:0x5ed5f1).setDepth(3);this.add.text(p.x,p.y-30,p.kind,{fontSize:'11px'}).setOrigin(.5);return{...p,object};});
     this.goal=this.add.rectangle(this.level.goal.x,this.level.goal.y,45,120,0x82ec7b);this.add.text(this.level.goal.x,660,'GOAL',{fontSize:'22px'}).setOrigin(.5);
+    laboratory(this);
     this.powerVersion=this.session.power.version;this.sizeScale=1;this.sizeBlocked=false;
     document.querySelector('#result')!.textContent='';
     this.hud=this.add.text(16,14,'',{fontSize:'16px',color:'#ffffff'}).setScrollFactor(0).setDepth(100);

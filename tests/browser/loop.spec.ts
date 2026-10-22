@@ -37,10 +37,10 @@ test('D5: time-up locks result and rejects late score/pickup/goal',async({page})
  const r=await page.evaluate(()=>{const s=(window as any).__gameplay;s.session.credit('late','melee');s.session.pickup('late');s.session.finish('goal');return s.session.result;});
  expect(r.remainingTime).toBe(0);expect(r.scoreBreakdown.goal).toBe(0);expect(r.scoreBreakdown.noDrop).toBe(0);
 });
-test('M2 placeholder lock preserves bodies even with art query and alternate identity',async({page})=>{
+test('approved character sprites preserve bodies with art query and alternate identity',async({page})=>{
  await page.goto('/?debug=1&art=1');await page.waitForFunction(()=>!!(window as any).__gameplay?.presentation?.visual);
  await page.selectOption('#character','kael');await page.click('#start');await page.waitForTimeout(100);
- expect(await page.evaluate(()=>{const s=(window as any).__gameplay;return{color:s.presentation.visual.fillColor,width:s.body.width,height:s.body.height,sprite:!!s.presentation.sprite,enemy:s.enemies.enemies[0].visual.fillColor};})).toEqual({color:0,width:32,height:48,sprite:false,enemy:0});
+ expect(await page.evaluate(()=>{const s=(window as any).__gameplay;return{color:s.presentation.visual.fillColor,width:s.body.width,height:s.body.height,sprite:!!s.presentation.sprite,enemy:s.enemies.enemies[0].visual.fillColor};})).toEqual({color:0,width:32,height:48,sprite:true,enemy:0});
  expect((await page.request.get('/assets/character-manifest.json')).ok()).toBe(true);
  expect(await page.evaluate(()=>(window as any).__gameplay.controller.constructor.name)).toBe('PlayerController');
 });

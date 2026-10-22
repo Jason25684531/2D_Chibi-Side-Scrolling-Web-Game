@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import manifest from '../../assets/character-manifest.json';
 export const characters=manifest.characters;
-// Only a future manifest change can enable art; URL parameters cannot bypass the lock.
+// The manifest controls presentation; URL parameters never alter collision bodies.
 export function preloadCharacters(scene:Phaser.Scene) {
   if(manifest.presentationMode!=='sprites')return;
   for(const c of characters)scene.load.spritesheet(c.id,c.atlas.plannedBrowserUrl,{frameWidth:256,frameHeight:256});
@@ -26,7 +26,7 @@ export class CharacterView {
   }
   update(state:string,facing:number,scale:number) {
     this.visual.setPosition(this.box.x,this.box.y+this.box.displayHeight/2-24*scale).setScale(scale);
-    this.label.setPosition(this.box.x,this.visual.y-24*scale-5).setText(`PLAYER · ${state}`);
+    this.label.setPosition(this.box.x,this.visual.y-24*scale-5).setText(`PLAYER · ${state}`).setVisible(!this.sprite);
     const action=this.character.stateBindings[state as keyof typeof this.character.stateBindings];
     this.visual.setVisible(!this.sprite||!action);
     if(this.sprite){this.sprite.setVisible(!!action).setPosition(this.box.x,this.box.y+this.box.displayHeight/2).setScale(.32*scale).setFlipX(facing<0);if(action)this.sprite.play(`${this.character.id}-${action}`,true);}

@@ -16,6 +16,7 @@ openspec/*
 !openspec/changes/
 openspec/changes/*
 !openspec/changes/fix-match-persistence-lifecycle/
+!openspec/changes/rog-future-gamer-uiux/
 
 # Python
 venv/
@@ -103,3 +104,14 @@ openspec/*
 docs/*
 webUIUX_Ref/*
 openspec/*
+
+# ROG UI implementation deliverables only.
+openspec/*
+!public/assets/
+!docs/evidence/
+docs/evidence/*
+!docs/evidence/rog-uiux/
+!docs/rog-uiux-report.md
+docs/*
+assets/*
+public/*

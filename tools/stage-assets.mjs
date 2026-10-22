@@ -12,4 +12,9 @@ for(const c of manifest.characters){
   c.atlas.runtimeUrl=c.atlas.plannedBrowserUrl;c.atlas.stagingStatus='staged';
 }
 await writeFile(resolve(root,'public/assets/character-manifest.json'),JSON.stringify(manifest,null,2));
+for(const id of ['aria','kael','riven']){
+  await mkdir(resolve(root,'public/assets/ui'),{recursive:true});
+  await copyFile(resolve(root,`webUIUX_Ref/characters/${id}/hero_action_bundle/processed/idle/${id}-idle-01.png`),resolve(root,`public/assets/ui/${id}.png`));
+}
+await copyFile(resolve(root,'webUIUX_Ref/element_img/Emeny_Dog.png'),resolve(root,'public/assets/ui/enemy-dog.png'));
 console.log(`Staged ${manifest.characters.length} unchanged atlases and provenance manifest.`);

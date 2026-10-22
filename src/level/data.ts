@@ -21,7 +21,7 @@ export const LEVEL:LevelData={width:4000,height:1100,pitY:1000,start:{x:120,y:77
   powerups:[400,1300,1800,2200,2900,3300,3600].map((x,i)=>({id:`power-${i}`,x,y:770,kind:i%2===0?'laptop':'ally'}))
 };
 export const TUTORIAL_LEVEL:LevelData={...LEVEL,width:1600,goal:{id:'tutorial-goal',x:1550,y:740},
-  terrain:[...LEVEL.terrain.filter(t=>['start-ground','jump-platform','double-platform','moving-platform'].includes(t.id)),{id:'tutorial-ground',kind:'ground',x:1375,y:830,width:450,height:60}],
+  terrain:[...LEVEL.terrain.filter(t=>['start-ground','jump-platform','double-platform','moving-platform','bounce-0'].includes(t.id)),{id:'tutorial-ground',kind:'ground',x:1375,y:830,width:450,height:60}],
   enemies:[{id:'tutorial-enemy',kind:'melee',x:650,y:778}],badges:LEVEL.badges.slice(0,8),powerups:[LEVEL.powerups[0]]};
 export function validateLevel(level:LevelData) {
   const items=[...level.terrain,...level.badges,...level.enemies,...level.powerups,level.goal];

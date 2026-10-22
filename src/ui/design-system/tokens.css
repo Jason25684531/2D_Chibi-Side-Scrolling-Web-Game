@@ -1,0 +1,8 @@
+:root {
+  --dark:#060b1c; --surface:#111b32; --panel:rgba(11,20,40,.94);
+  --red:#ff284b; --cyan:#35b6ff; --purple:#ad54ff; --gold:#ffc75a;
+  --text:#f5f8ff; --muted:#a7b7d1; --line:#42516b;
+  --font: "Segoe UI","Microsoft JhengHei",sans-serif;
+  --safe-x:96px; --safe-y:54px; --gap:24px;
+  --quick:120ms; --feedback:240ms; --panel-time:320ms;
+}

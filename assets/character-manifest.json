@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "presentationMode": "placeholder",
+  "presentationMode": "sprites",
   "experience": 3,
-  "status": "proposal-review",
+  "status": "integrated-existing-art",
   "sourceRoot": "Char_Aassest/characters",
   "characters": [
     {
@@ -19,8 +19,8 @@
         ],
         "stageTo": "public/assets/characters/aria/aria-atlas.png",
         "plannedBrowserUrl": "/assets/characters/aria/aria-atlas.png",
-        "runtimeUrl": null,
-        "stagingStatus": "not-staged"
+        "runtimeUrl": "/assets/characters/aria/aria-atlas.png",
+        "stagingStatus": "staged"
       },
       "frameSizePx": [
         256,
@@ -409,17 +409,23 @@
         "RUN": "run",
         "JUMP": "jump",
         "HURT": "hurt",
-        "DOUBLE_JUMP": null,
-        "DASH": null,
-        "FALL": null,
-        "WIN": null
+        "DOUBLE_JUMP": "jump",
+        "DASH": "run",
+        "FALL": "jump",
+        "WIN": "idle"
       },
       "expressions": {
         "NORMAL": null,
         "HURT": null,
         "WIN": null
       },
-      "missingAssetPolicy": "labelled-graybox-placeholder"
+      "missingAssetPolicy": "documented-existing-pose-reuse; unbound states retain labeled geometric fallback",
+      "temporaryPoseReuse": {
+        "DOUBLE_JUMP": "jump",
+        "DASH": "run",
+        "FALL": "jump",
+        "WIN": "idle"
+      }
     },
     {
       "id": "kael",
@@ -435,8 +441,8 @@
         ],
         "stageTo": "public/assets/characters/kael/kael-atlas.png",
         "plannedBrowserUrl": "/assets/characters/kael/kael-atlas.png",
-        "runtimeUrl": null,
-        "stagingStatus": "not-staged"
+        "runtimeUrl": "/assets/characters/kael/kael-atlas.png",
+        "stagingStatus": "staged"
       },
       "frameSizePx": [
         256,
@@ -825,17 +831,23 @@
         "RUN": "run",
         "JUMP": "jump",
         "HURT": "hurt",
-        "DOUBLE_JUMP": null,
-        "DASH": null,
-        "FALL": null,
-        "WIN": null
+        "DOUBLE_JUMP": "jump",
+        "DASH": "run",
+        "FALL": "jump",
+        "WIN": "idle"
       },
       "expressions": {
         "NORMAL": null,
         "HURT": null,
         "WIN": null
       },
-      "missingAssetPolicy": "labelled-graybox-placeholder"
+      "missingAssetPolicy": "documented-existing-pose-reuse; unbound states retain labeled geometric fallback",
+      "temporaryPoseReuse": {
+        "DOUBLE_JUMP": "jump",
+        "DASH": "run",
+        "FALL": "jump",
+        "WIN": "idle"
+      }
     },
     {
       "id": "riven",
@@ -851,8 +863,8 @@
         ],
         "stageTo": "public/assets/characters/riven/riven-atlas.png",
         "plannedBrowserUrl": "/assets/characters/riven/riven-atlas.png",
-        "runtimeUrl": null,
-        "stagingStatus": "not-staged"
+        "runtimeUrl": "/assets/characters/riven/riven-atlas.png",
+        "stagingStatus": "staged"
       },
       "frameSizePx": [
         256,
@@ -1241,17 +1253,23 @@
         "RUN": "run",
         "JUMP": "jump",
         "HURT": "hurt",
-        "DOUBLE_JUMP": null,
-        "DASH": null,
-        "FALL": null,
-        "WIN": null
+        "DOUBLE_JUMP": "jump",
+        "DASH": "run",
+        "FALL": "jump",
+        "WIN": "idle"
       },
       "expressions": {
         "NORMAL": null,
         "HURT": null,
         "WIN": null
       },
-      "missingAssetPolicy": "labelled-graybox-placeholder"
+      "missingAssetPolicy": "documented-existing-pose-reuse; unbound states retain labeled geometric fallback",
+      "temporaryPoseReuse": {
+        "DOUBLE_JUMP": "jump",
+        "DASH": "run",
+        "FALL": "jump",
+        "WIN": "idle"
+      }
     }
   ]
 }

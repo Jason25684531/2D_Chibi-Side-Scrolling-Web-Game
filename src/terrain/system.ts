@@ -14,7 +14,7 @@ export class TerrainSystem {
       if(data.kind==='slope'){
         object.setAlpha(0);
         const left=data.x-data.width/2,right=data.x+data.width/2;
-        const g=scene.add.graphics().fillStyle(0x65788c);
+        const g=scene.add.graphics().fillStyle(0x22344a);
         g.fillPoints([{x:left,y:this.slopeY(data,left)},{x:right,y:this.slopeY(data,right)},{x:right,y:data.y+data.height/2},{x:left,y:data.y+data.height/2}],true);
         continue;
       }

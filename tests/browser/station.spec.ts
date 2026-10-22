@@ -53,7 +53,7 @@ test('M6 full keyboard Goal flow, screenshots, result wait, replay resets and qu
   await page.waitForTimeout(500);await expect(page.locator('[data-screen=P6]')).toBeVisible();
   await page.keyboard.press('Enter');await expect(page.locator('[data-screen=P7]')).toBeVisible();
   await expect(page.locator('[data-action=exit]')).toBeFocused();await expect(page.locator('[data-action=replay]')).toBeDisabled();await shot('P7');
-  await page.keyboard.press('ArrowLeft');await expect(page.locator('[data-action=exit]')).toBeFocused();
+  await page.keyboard.press('ArrowLeft');await expect(page.locator('[data-action=ranking]')).toBeFocused();
   await page.evaluate(()=>{const u=(window as any).__station;u.adapter.replayEnabled=true;u.render();});
   await page.keyboard.press('ArrowLeft');await expect(page.locator('[data-action=replay]')).toBeFocused();await page.keyboard.press('Enter');
   await expect(page.locator('[data-screen=P4]')).toBeVisible({timeout:5000});
