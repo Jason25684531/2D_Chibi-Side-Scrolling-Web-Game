@@ -9,7 +9,8 @@ import {MockStation,titles} from './mock-station';
 import {avatar,button,panel,escape,focus,text,time,chip,icon,statRow,titleTag,rankRow} from './components';
 import './station.css';
 import {hud,updateHud} from './hud';
-const STEPS=['UC02-1 選擇角色','UC02-2 選擇攻擊道具','UC04-1 輸入暱稱'];
+// UC02-1 → UC02-2 → UC04-1: [step chip, step chip EN, section title, section title EN].
+const STEPS=[['角色','CHARACTER','選擇角色','SELECT YOUR CHARACTER'],['道具','ITEM','選擇攻擊道具','SELECT YOUR ATTACK ITEM'],['暱稱','NICKNAME','輸入暱稱','ENTER YOUR NICKNAME']];
 const ATTRACT_IDLE=60000;
 const NAV='<span><kbd>← →</kbd>選擇</span><span><kbd>Z / ENTER</kbd>確認</span><span><kbd>BACKSPACE</kbd>返回</span><span><kbd>H</kbd>選單</span>';
 const HINTS:Record<string,string>={P0:'<span><kbd>Z / ENTER</kbd>加入示範佇列</span><span><kbd>H</kbd>系統選單</span>',P3:'<span><kbd>← →</kbd>移動</span><span><kbd>Z</kbd>跳躍</span><span><kbd>X</kbd>衝刺</span><span><kbd>C</kbd>投擲</span><span><kbd>H</kbd>選單</span>'};
@@ -117,7 +118,7 @@ export class StationUI {
     }
     if(this.flow.flow==='P1'){
       const state=this.adapter.current?.assetState;const b=this.ui.querySelector<HTMLButtonElement>('[data-action=ready]');
-      if(b){const wasDisabled=b.disabled;b.disabled=state==='generating';if(wasDisabled&&!b.disabled&&!this.menu)b.focus();}text(this.ui,'readiness',state==='generating'?'角色準備中，請稍候…':state==='ready'?'已就緒':'角色備援模式');
+      if(b){const wasDisabled=b.disabled;b.disabled=state==='generating';if(wasDisabled&&!b.disabled&&!this.menu)b.focus();}text(this.ui,'readiness',state==='generating'?'角色準備中，請稍候…':state==='ready'?'已就緒':'角色備援模式');text(this.ui,'ready-label',this.readyLabel());
     }
     if(this.flow.flow==='P3'&&!this.menu){
       const loaded=this.game.registry.get('assetsReady');
@@ -174,15 +175,18 @@ export class StationUI {
     return `<div class="screen ${classes}" data-screen="${this.flow.flow}"><i class="floor"></i><header class="top">${BRAND}${title?`<div class="stage-name">${title}<small>${en}</small></div>`:''}</div><div class="status">${chips}</div></header>${body}<div class="hints">${HINTS[this.flow.flow]??NAV}</div><div class="hints-right">Republic of Gamers · 本機成績 · 示範排隊</div></div>`;
   }
   get item(){return ATTACK_ITEMS.find(i=>i.src===this.adapter.current?.attackItem)??ATTACK_ITEMS[0];}
-  /** UC02-1 → UC02-2 → UC04-1; every step defaults so three confirms start the run. */
+  readyLabel(){return this.adapter.current?.assetState==='generating'?'角色準備中':this.step<2?'下一步':'開始任務';}
+  /** UC02-1 → UC02-2 → UC04-1; every step defaults so three confirms start the run. Layout A: cards + hero; the CTA never moves. */
   readiness(){
-    const c=this.adapter.current,character=c?.characterId??'a',steps=`<ol class="steps">${STEPS.map((s,i)=>`<li data-state="${i<this.step?'done':i===this.step?'active':'todo'}">${s}</li>`).join('')}</ol>`;
-    const next=button('ready',this.step<2?'下一步':'開始任務',this.step<2?'NEXT':'START MISSION',c?.assetState==='generating');
+    const c=this.adapter.current,character=c?.characterId??'a',[,,title,en]=STEPS[this.step];
+    const steps=`<ol class="steps">${STEPS.map(([zh,e],i)=>`<li data-state="${i<this.step?'done':i===this.step?'active':'todo'}"><b>0${i+1}</b>${zh}<small>${e}</small></li>`).join('')}</ol>`;
+    const hero=`<div class="hero"><div class="plate"><span>ROG FUTURE GAMER</span></div><img src="${pose(character,'attack1')}" alt="${escape(characterName(character))}"></div>`;
+    const plate=(edit:boolean)=>`<div class="name-plate ${edit?'big':''}"><label ${edit?'for="nickname"':''}><em>PLAYER</em>玩家暱稱${edit?'（最多 8 字）':''}</label><div class="field">${edit?`<input id="nickname" maxlength="8" autocomplete="off" value="${escape(c?.nickname??'')}">`:`<span>${escape(c?.nickname??'')}</span>`}${icon('pencil')}</div><p class="hint">${edit?`預設暱稱已自動產生，可直接開始。<br>角色 ${characterName(character)} · 道具 ${escape(this.item.name)}`:'步驟 3 可修改暱稱'}</p></div>`;
     let body='';
-    if(this.step===0)body=`<div class="selection-layout"><div class="character-grid">${characterIds.map((id,i)=>`<button class="character-card ${character===id?'selected':''}" aria-pressed="${character===id}" data-action="character-${id}"><span class="card-index">0${i+1}</span>${avatar(id)}<strong>${characterName(id)}</strong><small>${character===id?'已選擇 / SELECTED':'可用 / AVAILABLE'}</small></button>`).join('')}</div><div class="character-hero"><span class="hero-ring"></span>${avatar(character)}<div class="hero-name">${characterName(character)}</div><span class="hero-caption">YOUR NEXT CHAPTER STARTS HERE</span></div></div>`;
-    if(this.step===1)body=`<div class="item-grid">${ATTACK_ITEMS.map((item,i)=>{const m=weaponMode(item.src),on=c?.attackItem===item.src;return `<button class="item-card ${on?'selected':''}" aria-pressed="${on}" data-action="item-${i}" style="--mode:${m.color??'#ffd54f'}"><img src="${asset('items/攻擊道具/'+item.src)}" alt=""><strong>${escape(item.name)}</strong><small>${escape(item.feat)}</small><em>${m.tag??''}</em></button>`;}).join('')}</div>`;
-    if(this.step===2)body=`<div class="name-step">${avatar(character)}<div><label class="name-label" for="nickname">玩家暱稱 / NICKNAME（最多 8 字）</label><input id="nickname" maxlength="8" autocomplete="off" value="${escape(c?.nickname??'')}"><p>預設暱稱已自動產生，可直接開始。</p></div></div>`;
-    return this.shell(['選擇你的角色','選擇攻擊道具','輸入暱稱'][this.step],STEPS[this.step],`${steps}${body}<p id="readiness">角色備援模式</p><div class="selection-action">${next}</div>`,'readiness');
+    if(this.step===0)body=`<div class="cards">${characterIds.map((id,i)=>{const on=character===id;return `<button class="card character-card" aria-pressed="${on}" data-action="character-${id}"><span class="idx">0${i+1}</span><span class="art"><img src="${pose(id)}" alt=""></span><span class="name"><strong>${characterName(id)}</strong><small>${on?'已選擇 · SELECTED':characterRole(id)}</small></span></button>`;}).join('')}</div>${hero}${plate(false)}`;
+    if(this.step===1)body=`<div class="cards items">${ATTACK_ITEMS.map((item,i)=>{const m=weaponMode(item.src),on=c?.attackItem===item.src;return `<button class="card item-card" aria-pressed="${on}" data-action="item-${i}" style="--mode:${m.color??'#ffd54f'}"><span class="idx">0${i+1}</span><span class="art"><img src="${asset('items/攻擊道具/'+item.src)}" alt=""></span><span class="name"><strong>${escape(item.name)}</strong><small>${escape(item.feat)}</small><em>${m.tag??''}</em></span></button>`;}).join('')}</div>`;
+    if(this.step===2)body=hero+plate(true);
+    return this.shell('','',`<p class="slogan">PLAY BEYOND<b>»</b>GAME FOR TOMORROW</p>${steps}<div class="section-title"><h2>${title}</h2><span>${en}</span></div>${body}<div class="cta-wrap"><button class="cta" data-action="ready" ${c?.assetState==='generating'?'disabled':''}><strong id="ready-label">${this.readyLabel()}</strong><small>${this.step<2?'NEXT':'START MISSION'}</small></button></div>`,`readiness step-${this.step}`,chip('<span id="readiness">角色備援模式</span>','red'));
   }
   render(){
     const nickname=escape(this.adapter.current?.nickname??'PLYR'),character=this.adapter.current?.characterId??'a';let body='';
