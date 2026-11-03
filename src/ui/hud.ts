@@ -4,16 +4,17 @@ import {weaponMode} from '../core/config';
 import type {GameplaySession} from '../core/session';
 
 // Planning v0.3 §5 UC06-1: badges top-left, time top-centre, score top-right, Combo and invincibility at y240, attack item box.
+// v2 cut-corner islands; ids are the updateHud() contract and must not change.
 export function hud(attackItem:string){
   const m=weaponMode(attackItem);
   return `<div class="screen transparent" data-screen="P4">
     <div class="hud">
-      <section class="panel hud-badge"><div>${badgeIcon()} <strong id="hud-badges">0</strong><span class="hud-total"> / <span id="hud-total">—</span></span></div><h2>BADGES / 徽章</h2></section>
-      <section class="panel timer"><h2>◷ TIME LEFT</h2><strong id="hud-time">00:00</strong><small id="hud-warning">任務進行中</small></section>
-      <section class="panel hud-score"><h2>SCORE / 分數</h2><strong id="hud-score">0</strong></section>
+      <section class="island hud-badge">${badgeIcon()}<div><strong><span id="hud-badges">0</span><small class="hud-total"> / <span id="hud-total">—</span></small></strong><h2><b>徽章</b>BADGES</h2></div></section>
+      <section class="island timer"><h2><b>剩餘時間</b>TIME LEFT</h2><strong id="hud-time">00:00</strong><small id="hud-warning">任務進行中</small></section>
+      <section class="island hud-score"><h2><b>分數</b>SCORE</h2><strong id="hud-score">0</strong></section>
     </div>
-    <div class="combo-indicator" id="combo-box" data-active="false"><strong id="hud-combo">0</strong><span>COMBO<br><small id="hud-multiplier"></small></span></div>
-    <div class="power-indicator" id="power-box" hidden><span class="power-symbol">⌁</span><div><h2 id="hud-power">無敵 INVINCIBLE</h2><small id="power-detail"></small><progress id="power-progress" max="1" value="0" aria-label="無敵剩餘進度"></progress></div></div>
+    <div class="combo-indicator" id="combo-box" data-active="false"><strong id="hud-combo">0</strong><span>COMBO 連擊<small id="hud-multiplier"></small></span></div>
+    <div class="power-indicator" id="power-box" hidden><span class="power-symbol">⌁</span><div><h2 id="hud-power">無敵 <small>INVINCIBLE</small></h2><small id="power-detail"></small><progress id="power-progress" max="1" value="0" aria-label="無敵剩餘進度"></progress></div></div>
     <div class="weapon-box" id="weapon-box" data-armed="false" style="--mode:${m.color??'#ffd54f'}"><img src="${asset('items/攻擊道具/'+attackItem)}" alt=""><div><b id="weapon-tag">${m.tag??'ATTACK'}</b><small id="weapon-hint">尚未取得</small></div><span class="pick-pop" id="pick-pop">${m.tag??''}!</span></div>
     <span class="hud-location" id="hud-segment"></span>
   </div>`;
