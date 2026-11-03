@@ -92,3 +92,20 @@ kbd{margin-right:10px;padding:4px 10px;border:1px solid var(--rog-line);backgrou
 .modal{position:absolute;inset:0;z-index:10;display:flex;justify-content:center;align-items:center;background:rgba(0,0,0,.72);pointer-events:auto}
 .modal.screen{background:rgba(0,0,0,.72)}.modal.screen:before,.modal.screen:after{content:none}
 @media(prefers-reduced-motion:reduce){.card:hover,.card[aria-pressed=true]{transform:none}}
+
+/* ===== P5 GOAL / TIME UP ===== */
+.goal-burst{position:absolute;left:120px;top:120px;width:1000px;height:760px;background:radial-gradient(closest-side at 45% 45%,rgba(255,10,60,.35),rgba(255,10,60,.08) 55%,transparent 75%);pointer-events:none}
+.goal-burst:before{content:'';position:absolute;inset:0;background:repeating-conic-gradient(from -20deg at 45% 45%,rgba(255,255,255,.05) 0 3deg,transparent 3deg 14deg);-webkit-mask:radial-gradient(closest-side,#000,transparent 80%);mask:radial-gradient(closest-side,#000,transparent 80%)}
+.goal-art{position:absolute;left:150px;bottom:190px;height:600px;filter:drop-shadow(0 0 40px rgba(255,10,60,.5)) drop-shadow(0 24px 30px #000)}
+.goal-title{position:absolute;left:300px;top:200px;font:900 italic 230px/1 var(--font-display);letter-spacing:-.02em;color:var(--rog-red);text-shadow:0 0 40px rgba(255,10,60,.8),0 0 100px rgba(255,10,60,.5),6px 8px 0 #2a0610;transform:rotate(-6deg);transform-origin:left bottom}
+.goal-sub{position:absolute;left:560px;top:470px;transform:rotate(-6deg);transform-origin:left top}
+.goal-sub h2{font:900 72px/1 var(--font-zh);letter-spacing:.12em;text-shadow:0 0 24px rgba(255,10,60,.6)}
+.goal-sub small{display:block;margin-top:14px;font:700 28px var(--font-label);letter-spacing:.4em;color:var(--rog-red)}
+.time-up .goal-burst{background:radial-gradient(closest-side at 45% 45%,rgba(58,160,255,.28),rgba(58,160,255,.06) 55%,transparent 75%)}
+.time-up .goal-title{font-size:150px;color:#fff;text-shadow:0 0 30px rgba(58,160,255,.8),6px 8px 0 #0a1a2e}
+.time-up .goal-sub h2{text-shadow:0 0 24px rgba(58,160,255,.6)}.time-up .goal-sub small{color:var(--rog-blue)}
+.time-up .goal-art{height:520px;filter:grayscale(.3) drop-shadow(0 24px 30px #000)}
+.report{position:absolute;left:1230px;top:200px;width:594px;height:600px}
+.report-title{padding:26px 28px 0}
+.report .foot{position:absolute;left:0;right:0;bottom:0;padding:22px 28px;border-top:1px solid var(--rog-line);display:flex;justify-content:space-between;align-items:center;font:500 18px var(--font-zh);color:var(--rog-muted)}
+.report .foot small{font:700 14px var(--font-label);letter-spacing:.3em}
