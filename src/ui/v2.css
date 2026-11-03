@@ -122,6 +122,7 @@ kbd{margin-right:10px;padding:4px 10px;border:1px solid var(--rog-line);backgrou
 .verdict{position:relative;height:220px;overflow:hidden;border-bottom:1px solid var(--rog-line);background:radial-gradient(70% 90% at 60% 60%,rgba(255,10,60,.28),transparent 70%)}
 .verdict .avatar{position:absolute;right:4px;bottom:-8px;width:190px;height:190px;filter:drop-shadow(0 0 24px rgba(255,10,60,.5)) drop-shadow(0 10px 16px #000)}
 .verdict .word{position:absolute;left:28px;top:18px;font:900 italic 88px/1 var(--font-display);color:var(--rog-red);text-shadow:0 0 30px rgba(255,10,60,.7),4px 5px 0 #2a0610;letter-spacing:-.02em}
+.verdict .word.finished{font-size:60px;top:36px}
 .verdict .word small{display:block;margin-top:8px;font:600 16px var(--font-label);font-style:normal;letter-spacing:.35em;color:var(--rog-muted);text-shadow:none}
 .verdict .title-badge{position:absolute;left:28px;bottom:14px;max-width:380px;font-size:22px;padding:10px 20px}
 .breakdown{padding:4px 0}.breakdown .stat{height:40px;border:0}.breakdown .lbl{font-size:20px;color:var(--rog-muted)}.breakdown .lbl small{display:none}.breakdown .val{font-size:26px}
