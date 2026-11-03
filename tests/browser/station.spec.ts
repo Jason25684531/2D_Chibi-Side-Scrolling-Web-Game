@@ -61,8 +61,7 @@ test('M6 full keyboard Goal flow, screenshots, result wait, replay resets and qu
   const paused=await page.evaluate(()=>(window as any).__gameplay.run.remaining);await page.waitForTimeout(200);expect(await page.evaluate(()=>(window as any).__gameplay.run.remaining)).toBe(paused);
   await page.keyboard.press('ArrowLeft');await expect(page.locator('.modal [data-action=exit]')).toBeFocused();await page.keyboard.press('Enter');
   await expect(page.locator('[data-screen=P0]')).toBeVisible();expect(await page.evaluate(()=>(window as any).__station.adapter.queue.length)).toBe(0);
-  await page.evaluate(()=>{const u=(window as any).__station;u.entered=performance.now()-20500;});
-  await expect(page.getByRole('heading',{name:'TOP 20 / 100 秒'})).toBeVisible();
+  await expect(page.locator('[data-screen=P0] .wall')).toBeVisible();await expect(page.getByRole('heading',{name:'TOP 20 / 100 秒'})).toBeVisible();
   await page.screenshot({path:'docs/evidence/uiux-screens/P0-ranking.png'});
   expect(errors).toEqual([]);expect(external).toEqual([]);
 });
@@ -89,4 +88,15 @@ test('window blur during a station run opens the system menu instead of a silent
   await page.evaluate(()=>window.dispatchEvent(new Event('blur')));
   await expect(page.locator('.modal.screen [data-action=continue]')).toBeFocused();
   expect(await page.evaluate(()=>(window as any).__gameplay.run.phase)).toBe('paused');
+});
+
+test('P0 shows the wall and TOP 20 together; the board flips page every 10 s',async({page})=>{
+  await page.addInitScript(key=>localStorage.setItem(key,JSON.stringify({schemaVersion:1,records:Array.from({length:12},(_,i)=>({runId:`w-${i}`,nickname:'Player '+i,score:1000-i,tier:'100',titles:[],characterId:'a'}))})),'rog-future-gamer.records.v1');
+  await page.goto('/');await expect(page.locator('[data-screen=P0] .wcard.empty')).toContainText('成為下一位');
+  await expect(page.getByRole('heading',{name:'TOP 20 / 100 秒'})).toBeVisible();await expect(page.locator('.top20 .rank-row')).toHaveCount(10);
+  await page.evaluate(()=>{(window as any).__station.entered=performance.now()-10100;});
+  await expect(page.locator('.top20 .rank-row')).toHaveCount(2);await expect(page.locator('.top20 .rank-row b').first()).toHaveText('11');
+  await expect(page.locator('[data-screen=P0] .wall')).toBeVisible();
+  await page.evaluate(()=>{(window as any).__station.entered=performance.now()-20100;});
+  await expect(page.locator('.top20 .rank-row b').first()).toHaveText('01');
 });

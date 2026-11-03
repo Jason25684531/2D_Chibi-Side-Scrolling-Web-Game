@@ -23,7 +23,7 @@ export class StationUI {
   flow=new GameplayStateMachine();adapter=new MockStation();inputAdapter=new InputAdapter();
   tier=P.timeTier;entered=performance.now();countdownAt=0;menu=false;lastMove=0;testPad:Pad|null=null;
   root:HTMLElement;ui:HTMLElement;progress=new Set<string>();private previous=performance.now();
-  result:GameplayResult|null=null;standbyPage=-1;step=0;idleSince=performance.now();attract=false;
+  result:GameplayResult|null=null;step=0;idleSince=performance.now();attract=false;
   boardOpen=false;rankPage=0;private returnFocus:string|undefined;
   constructor(readonly game:Phaser.Game){
     document.body.classList.add('station');
@@ -114,7 +114,10 @@ export class StationUI {
     if(this.flow.flow==='P0'&&this.adapter.current)this.go('P1');
     if(this.flow.flow==='P0'){
       if(!this.attract&&!this.menu&&now-this.idleSince>=ATTRACT_IDLE){this.attract=true;this.render();}
-      const phase=(now-this.entered)%28000;const page=phase<20000?-1:0;if(page!==this.standbyPage){this.standbyPage=page;this.render();}const wall=this.ui.querySelector('.wall');if(wall)wall.scrollLeft=(phase/20000)*Math.max(0,wall.scrollWidth-wall.clientWidth);
+      // Wall and TOP 20 share the screen: wall scrolls on a 20 s cycle, board flips page every 10 s when there is a second page.
+      const t=now-this.entered,page=this.adapter.board(this.tier).length>10?Math.floor(t/10000)%2:0;
+      if(page!==this.rankPage&&!this.menu){this.rankPage=page;this.render();}
+      const wall=this.ui.querySelector('.wall');if(wall)wall.scrollLeft=(t%20000/20000)*Math.max(0,wall.scrollWidth-wall.clientWidth);
     }
     if(this.flow.flow==='P1'){
       const state=this.adapter.current?.assetState;const b=this.ui.querySelector<HTMLButtonElement>('[data-action=ready]');
@@ -191,7 +194,11 @@ export class StationUI {
   render(){
     const nickname=escape(this.adapter.current?.nickname??'PLYR'),character=this.adapter.current?.characterId??'a';let body='';
     switch(this.flow.flow){
-      case 'P0':body=this.shell('FOR THOSE WHO DARE','CYBER RUN / 電域狂奔',`${this.standbyPage<0?`<div class="wall">${[...this.adapter.wall.values()].map(r=>panel(escape(r.nickname),avatar(r.characterId)+`<p>${escape(r.titles[0]??'超新星')}</p>`)).join('')||panel('成為下一位 Future Gamer',avatar()+'<p>目前沒有玩家排隊</p>')}</div>`:panel(`TOP 20 / ${this.tier} 秒`,this.ranking(true))}<div class="actions">${button('demo','加入示範佇列','DEMO QUEUE')}</div>`)+(this.attract?`<video class="attract" src="${'/assets/cyber-run/attract.mp4'}" autoplay muted loop playsinline aria-label="首頁待機巡覽" onerror="this.remove()"></video>`:'');break;
+      case 'P0':{
+        const wall=[...this.adapter.wall.values()],paged=this.adapter.board(this.tier).length>10;
+        // ponytail: P0 only renders with an empty queue (update() jumps to P1 otherwise), so the notice is fixed copy.
+        body=this.shell('','',`<div class="p0-title"><h1>CYBER <span>RUN</span></h1><p>電域狂奔<small>FOR THOSE WHO DARE</small></p></div><div class="wall">${wall.map((r,i)=>`<div class="wcard"><span class="idx">${String(i+1).padStart(2,'0')}</span><img src="${pose(r.characterId)}" alt=""><div class="name"><strong title="${escape(r.nickname)}">${escape(r.nickname)}</strong><span class="title">${escape(r.titles[0]??'超新星')}</span></div></div>`).join('')||'<div class="wcard empty"><p>成為下一位<br>Future Gamer<small>NEXT PLAYER WANTED</small></p></div>'}</div><section class="panel top20"><h2>TOP 20<small> / ${this.tier} 秒</small></h2>${this.ranking(true)}${paged?`<div class="page"><b>${this.rankPage+1}</b> / 2 · 每 10 秒換頁</div>`:''}</section><div class="notice"><i>i</i><div><strong>目前沒有玩家排隊，歡迎參觀 ROG FUTURE GAMER</strong><small>NO PLAYERS IN QUEUE · FEEL FREE TO EXPLORE</small></div></div><div class="demo">${button('demo','加入示範佇列','DEMO QUEUE',false,'ghost')}</div>`,'standby',chip(`Replay ${this.adapter.replayEnabled?'開啟':'關閉'}`,'red'))+(this.attract?`<video class="attract" src="${'/assets/cyber-run/attract.mp4'}" autoplay muted loop playsinline aria-label="首頁待機巡覽" onerror="this.remove()"></video>`:'');break;
+      }
       case 'P1':body=this.readiness();break;
       case 'P3':{const lessons=this.game.scene.isActive('Gameplay')&&this.scene.session?.tutorial?this.lessons():[];body=this.shell('新手訓練場','TRAINING / 框1 AIO・練習',`<div class="columns">${panel(nickname,avatar(character)+'<p id="loading" role="status">載入中</p><progress class="progress" aria-label="素材載入進度" max="1" value="0"></progress>')}<div class="tutorial-window"><span>LIVE TRAINING / 自由練習</span></div></div><div class="lesson-grid" style="grid-template-columns:repeat(${Math.max(1,lessons.length)},1fr)">${lessons.map(([zh,en,key])=>`<div class="lesson" data-lesson="${zh}"><b>${en}</b><span>${key}</span><small class="lesson-state">尚未開始</small></div>`).join('')}</div><p id="tutorial-progress"></p><div id="countdown" class="countdown"></div>`,'tutorial');break;}
       case 'P4':body=hud(this.adapter.current?.attackItem??ATTACK_ITEMS[0].src);break;
