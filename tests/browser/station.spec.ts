@@ -76,6 +76,8 @@ test('Time Up presentation, generating readiness, simulated pad through three st
   await press(0);await expect(page.locator('.item-card')).toHaveCount(5);await expect(page.locator('[data-action=ready]')).toBeFocused();await press(0);
   await expect(page.locator('#nickname')).toBeVisible();await press(0);
   await expect(page.locator('[data-screen=P4]')).toBeVisible({timeout:15000});
+  // P4 renders one frame before scene.restart() swaps the tutorial run for the real one; wait for the real run.
+  await page.waitForFunction(()=>{const s=(window as any).__gameplay;return !s.session.tutorial&&s.run.phase==='running';});
   await page.evaluate(()=>{const s=(window as any).__gameplay;s.run.elapsed=s.run.duration-.05;});
   await expect(page.locator('[data-screen=P5]')).toBeVisible();await expect(page.getByRole('heading',{name:'時間到！'})).toBeVisible();await page.screenshot({path:'docs/evidence/uiux-screens/P5-time-up.png'});
   await expect(page.locator('[data-screen=P6]')).toBeVisible({timeout:5000});

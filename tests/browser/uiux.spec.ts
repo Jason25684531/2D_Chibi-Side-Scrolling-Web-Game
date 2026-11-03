@@ -22,6 +22,7 @@ test('tutorial lessons come from the practice slice, follow runtime actions and 
   await page.screenshot({path:'docs/evidence/rog-uiux/tutorial-completed.png'});
   await page.evaluate(()=>{const u=(window as any).__station;u.entered=performance.now()-8001;u.countdownAt=performance.now()-3001;});
   await expect(page.locator('[data-screen=P4]')).toBeVisible();
+  await page.waitForFunction(()=>(window as any).__gameplay.run.phase==='running'&&!(window as any).__gameplay.session.tutorial); // restart lands one frame after P4 renders
   expect(await page.evaluate(()=>{const s=(window as any).__gameplay.session;return{tutorial:s.tutorial,score:s.score.total,badges:s.badges.held,armed:s.power.armed,ally:s.power.ally,bounces:s.stats.bounces};})).toEqual({tutorial:false,score:0,badges:0,armed:false,ally:false,bounces:0});
 });
 
