@@ -1,20 +1,25 @@
 import type {GameplayResult} from '../core/session';
-export type Identity={sessionId:string;nickname:string;characterId?:string;assetState:'ready'|'generating'|'fallback'};
+import {ATTACK_ITEMS} from '../core/config';
+export type Identity={sessionId:string;nickname:string;characterId?:string;attackItem:string;photo?:string;assetState:'ready'|'generating'|'fallback'};
 export type Ranking={runId:string;nickname:string;score:number;tier:string;titles:string[];characterId?:string;completedAt?:string};
 export const RECORDS_KEY='rog-future-gamer.records.v1';
+const SEQ_KEY='fg3-plyr-seq';
+/** UC04-1 default nickname PLYR#### from a local sequence (planning v0.3). */
+export function nextNickname(){let n=1;try{n=(Number(localStorage.getItem(SEQ_KEY))||0)+1;localStorage.setItem(SEQ_KEY,String(n));}catch{/* storage denied: keep 1 */}return 'PLYR'+String(n%10000).padStart(4,'0');}
 export function validRanking(value:unknown):value is Ranking{
   if(!value||typeof value!=='object')return false;
   const r=value as Ranking;
   return typeof r.runId==='string'&&r.runId.length>0&&r.runId.length<=128
     &&typeof r.nickname==='string'&&r.nickname.trim().length>0&&r.nickname.length<=24
-    &&Number.isFinite(r.score)&&r.score>=0&&['60','90','120'].includes(r.tier)
+    &&Number.isFinite(r.score)&&r.score>=0&&['60','90','100','120'].includes(r.tier)
     &&Array.isArray(r.titles)&&r.titles.length<=8&&r.titles.every(t=>typeof t==='string'&&t.length<=80)
-    &&(r.characterId===undefined||['aria','kael','riven'].includes(r.characterId))
+    &&(r.characterId===undefined||['a','b','aria','kael','riven'].includes(r.characterId))
     &&(r.completedAt===undefined||(typeof r.completedAt==='string'&&Number.isFinite(Date.parse(r.completedAt))));
 }
+// Planning v0.3 TITLES, rarest first. An empty list is shown as 「超新星」.
 export function titles(r:GameplayResult){
-  const s=r.playerStatistics;
-  return [r.endReason==='goal'&&!r.badgeDropOccurred?'零失誤大師':'',r.endReason==='goal'&&r.duration-r.remainingTime<=55?'極速跑者':'',s.maxCombo>=5?'連段高手':'',s.paralyses>=8?'閃電快手':'',s.stomps>=8?'踩擊達人':'',s.bounces>=4?'彈跳高手':'',r.heldBadgeCount>=50?'徽章收藏家':'','Future Gamer 超新星'].filter(Boolean);
+  const s=r.playerStatistics,clear=r.endReason==='goal';
+  return [clear&&!r.badgeDropOccurred?'零失誤大師':'',clear&&r.duration-r.remainingTime<=55?'極速跑者':'',s.maxCombo>=4?'連段高手':'',s.bolts>=3?'閃電快手':'',s.stomps>=5?'踩擊達人':'',s.bounces>=4?'彈跳高手':'',r.heldBadgeCount>=45?'徽章收藏家':''].filter(Boolean);
 }
 // Queue simulation only. Rankings are real local completed runs, not fixtures.
 export class MockStation {
@@ -43,11 +48,11 @@ export class MockStation {
   }
   retryStorage(){this.load();if(this.storageStatus==='ready')this.persist();}
   get current(){return this.queue[0];}
-  enqueue(nickname='Demo Player'){this.queue.push({sessionId:crypto.randomUUID(),nickname,characterId:'aria',assetState:'fallback'});}
+  enqueue(nickname=typeof window==='undefined'?'PLYR0001':nextNickname()){this.queue.push({sessionId:crypto.randomUUID(),nickname,characterId:'a',attackItem:ATTACK_ITEMS[0].src,assetState:'fallback'});}
   exit(){this.queue.shift();}
   save(result:GameplayResult){
     if(!this.current||this.records.some(r=>r.runId===result.runId))return;
-    const row={runId:result.runId,nickname:this.current.nickname.trim().slice(0,24)||'Future Gamer',score:result.score,tier:result.timeTier,titles:titles(result),characterId:this.current.characterId??'aria',completedAt:new Date().toISOString()};
+    const row={runId:result.runId,nickname:this.current.nickname.trim().slice(0,24)||'Future Gamer',score:result.score,tier:result.timeTier,titles:titles(result),characterId:this.current.characterId??'a',completedAt:new Date().toISOString()};
     this.records.push(row);this.wall.set(this.current.sessionId,row);this.persist();
   }
   board(tier:number){return this.records.filter(r=>r.tier===String(tier)).sort((a,b)=>b.score-a.score);}

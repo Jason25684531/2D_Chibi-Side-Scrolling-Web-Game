@@ -113,3 +113,20 @@ body.station{margin:0;background:#030508;color:#edf5ff;font-family:'Segoe UI','M
 .empty-state{font-size:28px!important;line-height:1.6}.empty-state small{font-size:22px}
 .screen[data-screen=P6] .ranking{max-height:330px;overflow-y:auto}.screen[data-screen=P6] .rank-row{min-height:32px;font-size:23px}
 .leaderboard-table:has(.storage-error) .rank-row{height:28px;min-height:28px;font-size:20px}
+
+/* CYBER RUN planning v0.3 (UX Flow v0.2) additions */
+.steps{display:flex;gap:24px;list-style:none;padding:0;margin:20px 0 0;font-size:22px;letter-spacing:2px}.steps li{padding:8px 18px;border:1px solid var(--line);color:var(--muted)}
+.steps li[data-state=active]{border-color:var(--red);color:var(--text)}.steps li[data-state=done]{border-color:var(--gold);color:var(--gold)}
+.readiness .character-grid{grid-template-columns:repeat(2,1fr);max-width:640px}.readiness .selection-layout{grid-template-columns:700px 1fr;margin-top:28px}
+.item-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:20px;margin-top:40px}
+.screen .item-card{min-width:0;height:420px;padding:20px 14px;display:flex;flex-direction:column;align-items:center;gap:10px;background:linear-gradient(160deg,#18243c,#0b1428);border:1px solid #42516b;border-top:4px solid var(--mode)}
+.item-card img{width:200px;height:200px;object-fit:contain}.screen .item-card strong{font-size:26px;letter-spacing:0;text-align:center}.screen .item-card small{font-size:20px}
+.item-card em{font:900 italic 28px var(--font);color:var(--mode);letter-spacing:3px}.screen .item-card.selected{border:2px solid var(--red);border-top:4px solid var(--mode);background:linear-gradient(155deg,#4e2031,#0b1428)}
+.name-step{display:grid;grid-template-columns:420px 1fr;gap:60px;align-items:center;margin-top:40px}.name-step .avatar{width:420px;height:480px}.name-step #nickname{font-size:56px;height:100px;letter-spacing:6px}
+.attract{position:absolute;inset:0;width:1920px;height:1080px;object-fit:cover;background:#000;z-index:5;pointer-events:none}
+.hud .hud-badge{width:440px;min-width:0;height:112px;padding:8px 24px}.hud .hud-badge .badge-icon{width:96px;height:96px;margin:-14px 0}.hud .hud-badge h2{font-size:18px;margin:0}
+.power-indicator{top:240px;bottom:auto;left:560px}.power-indicator[data-warn=true]{animation:blink .5s steps(2) infinite;border-left-color:var(--red)}
+@keyframes blink{50%{opacity:.35}}
+.weapon-box{position:absolute;right:96px;top:240px;width:330px;display:flex;gap:16px;align-items:center;padding:12px 18px;background:#0b1428ed;border-left:4px solid var(--mode);box-sizing:border-box}
+.weapon-box img{width:84px;height:84px;object-fit:contain}.weapon-box[data-armed=false] img{filter:grayscale(1) brightness(.5)}.weapon-box b{display:block;font:900 italic 30px var(--font);color:var(--mode);letter-spacing:3px}
+.weapon-box small{font-size:20px}.weapon-box[data-armed=false] b{color:var(--muted)}.pick-pop{position:absolute;left:30px;top:-36px;font:900 italic 34px var(--font);color:var(--mode);opacity:0;pointer-events:none}

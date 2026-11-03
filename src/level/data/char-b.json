@@ -1,0 +1,37 @@
+{
+ "_說明": "玩家角色 B（S2AM，整套 10 張；11/2 全部是正式圖。圖更新後在 chars/ 執行 python 匯入人物.py）的圖片與動作設定。level_editor.html 啟動時讀這個檔（讀不到就用程式內建的同一份預設值）。長度單位：格（1 格 = 64px）；時間單位：秒。碰撞框不變（0.75×2 格），圖只是畫在上面。",
+ "frames": {
+  "idle1":   "S2AM-1(待機微動).png",
+  "idle2":   "S2AM-2(待機微動).png",
+  "turn":    "S2AM-3(動作轉身).png",
+  "run1":    "S2AM-4(跑動第一禎).png",
+  "run2":    "S2AM-5(跑動第二禎).png",
+  "jump":    "S2AM-6(跳躍).png",
+  "djump":   "S2AM-7(二段跳躍).png",
+  "fall":    "S2AM-8(跳躍落下).png",
+  "attack1": "S2AM-9(攻擊第一禎).png",
+  "attack2": "S2AM-10(攻擊第二禎).png"
+ },
+ "_frames": "圖的路徑相對於這個 json。原圖在 闖關/人物設計（10 張同一個 2880×4528 畫布），更新後在 chars/ 執行 python 匯入人物.py：同畫布的圖用同一個裁切框、縮成高 512px，所以每張比例一致、位置照原圖（跳躍圖腳離地多高就畫多高）。",
+ "temp": [],
+ "_temp": "還是暫時圖、或還沒有圖的影格名稱：不載入也不畫，動作改用 fallback。目前 10 張都是正式圖。",
+ "height": 2.5,
+ "_height": "整張圖（裁切框）畫在畫面上的高度（格）：站著的角色約 2.25 格高；圖的最下緣＝原圖地面＝碰撞框底部。",
+ "facing": "right",
+ "_facing": "側面圖的朝向（-3～-10 都朝右）。往左時自動鏡射。",
+ "noFlip": ["idle1", "idle2"],
+ "_noFlip": "正面圖，往左時也不鏡射。",
+ "fallback": "run1",
+ "_fallback": "某個動作的圖都沒載入時用這張。",
+ "actions": {
+  "idle":   { "frames": ["idle1", "idle2"], "fps": 1.6, "breathe": 0.01, "delay": 0.15, "_": "待機：-1、-2 交替（微動）；停下 delay 秒後才轉正面；breathe＝呼吸伸縮比例" },
+  "turn":   { "frames": ["turn"], "dur": 0.1, "_": "轉身（-3）：從待機起步時先轉身 dur 秒再跑；停下時先轉身再轉正面（idle 的 delay）" },
+  "run":    { "frames": ["run1", "run2"], "fps": 9, "bob": 0.03, "_": "跑：-4、-5 交替；bob＝每步上下彈（格）" },
+  "dash":   { "frames": ["run2"], "tilt": 6, "_": "衝刺：跑動第二禎＋往前傾（度）" },
+  "jump":   { "frames": ["jump"], "_": "第一次跳、往上時：-6" },
+  "djump":  { "frames": ["djump"], "fallback": "jump", "_": "二段跳、往上時：-7" },
+  "fall":   { "frames": ["fall"], "_": "往下掉（一段跳、二段跳都一樣）：-8" },
+  "land":   { "frames": ["fall"], "squash": 0.06, "dur": 0.12, "_": "剛落地 dur 秒：維持 -8 落下姿勢＋壓扁一下" },
+  "attack": { "frames": ["attack1", "attack2"], "fps": 12, "once": true, "dur": 0.3, "_": "丟出攻擊道具：每次從 -9（蓄力）開始→ -10（丟出）停到 dur 結束；once＝不循環；fps 越大蓄力越短" }
+ }
+}

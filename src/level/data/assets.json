@@ -1,0 +1,638 @@
+{
+ "art/1.地磚-密道-1(一格).png": {
+  "url": "/assets/cyber-run/art/art-976d152b6e4b.png",
+  "w": 128,
+  "h": 256,
+  "sha256": "976d152b6e4ba9046c840549894c4901306f4e2f9a5586a44e2c90d4606cc3fe"
+ },
+ "art/1.地磚-平台-1( 三格).png": {
+  "url": "/assets/cyber-run/art/art-f4fb5ec69193.png",
+  "w": 384,
+  "h": 256,
+  "sha256": "f4fb5ec69193dce61216acdab0433043524d033624a798488c19ec7f09859a9e"
+ },
+ "art/1.地磚-平台-1(一格).png": {
+  "url": "/assets/cyber-run/art/art-79f337c31e48.png",
+  "w": 128,
+  "h": 256,
+  "sha256": "79f337c31e487148bceb5e9db2f844d4668fe8e0981dd187f7a5a830bc0f5419"
+ },
+ "art/1.地磚-平台-1無.png": {
+  "url": "/assets/cyber-run/art/art-0866d75326ee.png",
+  "w": 256,
+  "h": 256,
+  "sha256": "0866d75326eed9b5a5339a19f08141510c7f81eb46f3b8744eb3413043768850"
+ },
+ "art/1.地磚-平台-2( 三格).png": {
+  "url": "/assets/cyber-run/art/art-bfddf3a8a613.png",
+  "w": 384,
+  "h": 256,
+  "sha256": "bfddf3a8a6132709a931e2585efa8e1fccb652b06118703d8998d72b00c79453"
+ },
+ "art/1.地磚-平台-2(一格)雷射旁.png": {
+  "url": "/assets/cyber-run/art/art-843ca7060f85.png",
+  "w": 128,
+  "h": 256,
+  "sha256": "843ca7060f850be7286cfb6fe5a38b51b524b6c68dff795b0f7afe99ed522be4"
+ },
+ "art/10.終點.png": {
+  "url": "/assets/cyber-run/art/art-187b730f5c28.png",
+  "w": 512,
+  "h": 512,
+  "sha256": "187b730f5c28c6a7dda20a5fdffa8c7c9230a794af2401b76a82ffa2b8ada3d3"
+ },
+ "art/2.地磚-平台-1裝飾(左).png": {
+  "url": "/assets/cyber-run/art/art-1ef87d876bda.png",
+  "w": 256,
+  "h": 256,
+  "sha256": "1ef87d876bdab8c8bcfd391733459b647332f547fd7511683c90d0cef5720b74"
+ },
+ "art/3.地磚-平台-1裝飾(三格).png": {
+  "url": "/assets/cyber-run/art/art-4c4685c3972c.png",
+  "w": 384,
+  "h": 256,
+  "sha256": "4c4685c3972cd3be81af31a3652ac63d733e0ef1ec059ccfca30ed8d2027e638"
+ },
+ "art/3.地磚-平台-1裝飾(六格).png": {
+  "url": "/assets/cyber-run/art/art-6e020346e476.png",
+  "w": 384,
+  "h": 384,
+  "sha256": "6e020346e476abdfb490714f7a72b55226b42b72403d9650365a3e5ece2d5bd3"
+ },
+ "art/3.地磚-平台-1裝飾(凹).png": {
+  "url": "/assets/cyber-run/art/art-6779e177cf8c.png",
+  "w": 768,
+  "h": 384,
+  "sha256": "6779e177cf8cc120361eaef7d8c3abede13f3004d7e42b6fcc9009a059ab2fa9"
+ },
+ "art/3.地磚-平台-1裝飾(右).png": {
+  "url": "/assets/cyber-run/art/art-0263428c6f68.png",
+  "w": 256,
+  "h": 256,
+  "sha256": "0263428c6f6814ce0da42347055b18da74b1507956b241f645f49dc7cd8f35a2"
+ },
+ "art/3.地磚-平台-1裝飾(燈).png": {
+  "url": "/assets/cyber-run/art/art-cd4fa9553fe8.png",
+  "w": 256,
+  "h": 256,
+  "sha256": "cd4fa9553fe8931aacbcdd10e4419edc1c3fbf4e564d03ed4e73bfd653c4cfdc"
+ },
+ "art/4.地磚-平台-2(右).png": {
+  "url": "/assets/cyber-run/art/art-eca54eda65ec.png",
+  "w": 256,
+  "h": 256,
+  "sha256": "eca54eda65ece1561707d7b9c32f75e5fff018e703ef987d5fdbbad2f2d13598"
+ },
+ "art/4.地磚-平台-2(左).png": {
+  "url": "/assets/cyber-run/art/art-e81ebfc7f808.png",
+  "w": 256,
+  "h": 256,
+  "sha256": "e81ebfc7f808d9219dbf45a79c44d05c9778e5da4fb9d3d33feefab5e30fda92"
+ },
+ "art/5.地磚-平台-小斜坡(左).png": {
+  "url": "/assets/cyber-run/art/art-2b9ae967c991.png",
+  "w": 256,
+  "h": 256,
+  "sha256": "2b9ae967c991f055177d47cd3ee182d4f60ceb106020e3b54f2b00dff3956158"
+ },
+ "art/5.地磚-平台-斜坡(右).png": {
+  "url": "/assets/cyber-run/art/art-10d59ba5b5f6.png",
+  "w": 256,
+  "h": 256,
+  "sha256": "10d59ba5b5f68d58c26b32aea1a7d3f3080dc6e0a8ce48f166538b6709dd2b3f"
+ },
+ "art/5.地磚-平台-斜坡(左).png": {
+  "url": "/assets/cyber-run/art/art-50e7eb7f18a5.png",
+  "w": 256,
+  "h": 256,
+  "sha256": "50e7eb7f18a5dde374c19a97806ff5a0c3aa809530fe1df8db41a8bb05df4bef"
+ },
+ "art/5.地磚-平台-斜坡(左三格).png": {
+  "url": "/assets/cyber-run/art/art-f76dbb881944.png",
+  "w": 384,
+  "h": 384,
+  "sha256": "f76dbb881944f47474c8a80e0b118f4158e543e5da48978fee65c5411734ec5b"
+ },
+ "art/5.地磚-平台-斜坡底(左).png": {
+  "url": "/assets/cyber-run/art/art-047c065dbcfd.png",
+  "w": 256,
+  "h": 256,
+  "sha256": "047c065dbcfde52dc065927f7b992068d1c62e81e1412d3f5b0de53f274cca48"
+ },
+ "art/5.地磚-平台-斜坡底(左一格).png": {
+  "url": "/assets/cyber-run/art/art-8ac35aa8b257.png",
+  "w": 128,
+  "h": 256,
+  "sha256": "8ac35aa8b2574ca0d1971cc261f2bd7a23f01180221e9fd7322d2056bcf03880"
+ },
+ "art/5.地磚-平台-斜坡燈(右).png": {
+  "url": "/assets/cyber-run/art/art-853c3839d3a6.png",
+  "w": 256,
+  "h": 256,
+  "sha256": "853c3839d3a6766f8469108038c16c0e5cab23698f5a7af23808aff45ae510c4"
+ },
+ "art/5.地磚-平台-斜坡燈(左).png": {
+  "url": "/assets/cyber-run/art/art-982e4fadee8c.png",
+  "w": 256,
+  "h": 256,
+  "sha256": "982e4fadee8c0f1e5a903c751dd7864e74b19a11e4fb49d3466247cf314991a6"
+ },
+ "art/5.地磚-斜底角(左).png": {
+  "url": "/assets/cyber-run/art/art-d9e1972e379c.png",
+  "w": 256,
+  "h": 256,
+  "sha256": "d9e1972e379cf249e6b435eb86da09e2f8df312225a4c93a9dad2c8c4fa70b63"
+ },
+ "art/6.地磚-平台-凸台(塔).png": {
+  "url": "/assets/cyber-run/art/art-1d711eadeddf.png",
+  "w": 256,
+  "h": 384,
+  "sha256": "1d711eadeddf64d70ed25f95f7c5a98c4ec94285d1b2ddf83fddd6ea94e56cff"
+ },
+ "art/7.地磚-漂浮台( 左).png": {
+  "url": "/assets/cyber-run/art/art-6b422533a2e1.png",
+  "w": 256,
+  "h": 128,
+  "sha256": "6b422533a2e17691d2b6797bebec18d4b753300b60ec229461af9a4b7eb56e2a"
+ },
+ "art/7.地磚-漂浮台(中).png": {
+  "url": "/assets/cyber-run/art/art-1ccf3c701f96.png",
+  "w": 256,
+  "h": 128,
+  "sha256": "1ccf3c701f96d4a80171afa8fa19e86a393c3975400a0a029d361696764ae349"
+ },
+ "art/7.地磚-漂浮台(中一格).png": {
+  "url": "/assets/cyber-run/art/art-1f30237fc0cf.png",
+  "w": 128,
+  "h": 128,
+  "sha256": "1f30237fc0cf85cd07d2a0e4d6c035a1ef05860dfb288591b33881301157970c"
+ },
+ "art/7.地磚-漂浮台(中三格).png": {
+  "url": "/assets/cyber-run/art/art-bee5c0ca70f4.png",
+  "w": 384,
+  "h": 128,
+  "sha256": "bee5c0ca70f429ec88b94a5023d4f9b7a23c2eed395a7806b40ec7f8576eacb1"
+ },
+ "art/7.地磚-漂浮台(燈).png": {
+  "url": "/assets/cyber-run/art/art-08fda76e6401.png",
+  "w": 256,
+  "h": 128,
+  "sha256": "08fda76e64017d3585931b0d2cccb3a0bb4cbeaca5aa500ccc489d2de084053f"
+ },
+ "art/7.地磚-漂浮台(移動三格).png": {
+  "url": "/assets/cyber-run/art/art-acd01351bb21.png",
+  "w": 384,
+  "h": 128,
+  "sha256": "acd01351bb217c2941e08764e2075844836a01bb7754a0f46a70f9a1b27374a2"
+ },
+ "art/8.地磚-雷射陷阱區(下三格).png": {
+  "url": "/assets/cyber-run/art/art-f541a0f0b4a7.png",
+  "w": 256,
+  "h": 384,
+  "sha256": "f541a0f0b4a780a7e6c725d9039301f890f8cab8a99d95e275c629b6639c469f"
+ },
+ "art/8.地磚-雷射陷阱區(中間三格).png": {
+  "url": "/assets/cyber-run/art/art-5e1ba165d3e3.png",
+  "w": 384,
+  "h": 384,
+  "sha256": "5e1ba165d3e3fe24d406a21bf0849a5ac84e43fbac34627d3df25d9c7c7a7576"
+ },
+ "art/8.地磚-雷射陷阱區(中間六格無邊).png": {
+  "url": "/assets/cyber-run/art/art-d27943c941a5.png",
+  "w": 384,
+  "h": 384,
+  "sha256": "d27943c941a506721ca9ebf6c9fa176e85d562815c150ba23c9dabb202a738ba"
+ },
+ "art/8.地磚-雷射陷阱區.png": {
+  "url": "/assets/cyber-run/art/art-46462a86545b.png",
+  "w": 256,
+  "h": 256,
+  "sha256": "46462a86545ba8e435ab3147d47fb651ebfd95ab10da5c7dd6106dc1a73b1481"
+ },
+ "art/8.地磚-雷射陷阱區_矮底(一格).png": {
+  "url": "/assets/cyber-run/art/art-f4400da65385.png",
+  "w": 128,
+  "h": 256,
+  "sha256": "f4400da6538535a99554a590a3a876b285c7ce32c59eaa99fbdf24b9934b576f"
+ },
+ "art/9.地磚-彈簧(壓縮).png": {
+  "url": "/assets/cyber-run/art/art-5a7016594f3c.png",
+  "w": 128,
+  "h": 64,
+  "sha256": "5a7016594f3c961b56f26cc1298618ff662f78ebdd5c96d73678d5f76bf51f15"
+ },
+ "art/9.地磚-彈簧(彈開).png": {
+  "url": "/assets/cyber-run/art/art-ae6e38696a05.png",
+  "w": 128,
+  "h": 160,
+  "sha256": "ae6e38696a05428d1c2fb4f8e89b6ee66cf0490225e4696f9778ad6347cddeb8"
+ },
+ "art/9.地磚-彈簧(正常).png": {
+  "url": "/assets/cyber-run/art/art-2b0d6a203123.png",
+  "w": 128,
+  "h": 128,
+  "sha256": "2b0d6a2031238e4e75be2970194d71358f35f3713922e8692d9b42519d114b4d"
+ },
+ "art/地磚-底下空(一格).png": {
+  "url": "/assets/cyber-run/art/art-114941c30e64.png",
+  "w": 128,
+  "h": 256,
+  "sha256": "114941c30e646236b1926f11329099359357494818d7d16c421a6f81d9a601fe"
+ },
+ "art/地磚-底下空.png": {
+  "url": "/assets/cyber-run/art/art-b106fe5ff870.png",
+  "w": 256,
+  "h": 256,
+  "sha256": "b106fe5ff870c062b7b9af0ff2f4fe19d8ca391763ac8186d567ecbc41852e1c"
+ },
+ "art/地磚-底柱頂-特色頂牆-2(一格).png": {
+  "url": "/assets/cyber-run/art/art-47f7471481d9.png",
+  "w": 128,
+  "h": 256,
+  "sha256": "47f7471481d917315d128f9f7e4f92d877c28a46a5e8b3961b1ebe3fa3ebda3e"
+ },
+ "art/地磚-底柱頂-特色頂牆-2(中一格).png": {
+  "url": "/assets/cyber-run/art/art-5b538afb78ae.png",
+  "w": 128,
+  "h": 256,
+  "sha256": "5b538afb78aeaf62868266bef45d7763cb6a35f3c894c37f9c840a7bce38b040"
+ },
+ "art/地磚-底柱頂-特色頂牆-2(驚嘆號).png": {
+  "url": "/assets/cyber-run/art/art-291758bf6a1c.png",
+  "w": 256,
+  "h": 256,
+  "sha256": "291758bf6a1ce0fb67243e14e7e2112fc4f508a12bf815ca09940d8394a50271"
+ },
+ "art/地磚-底柱頂-特色頂牆-2.png": {
+  "url": "/assets/cyber-run/art/art-5e213c429904.png",
+  "w": 256,
+  "h": 256,
+  "sha256": "5e213c42990436359e183ea91b7eadb63dea1b70fc2f6b9684b8cba74ebd70e7"
+ },
+ "art/地磚-底柱頂-特色頂邊-2(一格).png": {
+  "url": "/assets/cyber-run/art/art-0e5130296e55.png",
+  "w": 128,
+  "h": 256,
+  "sha256": "0e5130296e558a256ba0bc1e2e9645e4559807f45a3d919e122c635b3d82d3d7"
+ },
+ "art/地磚-底柱頂-特色頂邊-2.png": {
+  "url": "/assets/cyber-run/art/art-da7e68e34487.png",
+  "w": 256,
+  "h": 256,
+  "sha256": "da7e68e34487d352aef6a684fb8b10187f4583862ddf6150a6798429ee75af7c"
+ },
+ "art/地磚-底柱頂-特色頂邊.png": {
+  "url": "/assets/cyber-run/art/art-b91b4d9ed741.png",
+  "w": 256,
+  "h": 256,
+  "sha256": "b91b4d9ed74183bca8b040db06a59842c313be90225d5fd743b9c55212967da0"
+ },
+ "art/地磚-底柱頂.png": {
+  "url": "/assets/cyber-run/art/art-8334dd4d3983.png",
+  "w": 256,
+  "h": 256,
+  "sha256": "8334dd4d39831a1020c581c8278e9bf25b5ca5ad71f63469dcdb6a63c2b4919b"
+ },
+ "art/特色-地磚-X底架(九格).png": {
+  "url": "/assets/cyber-run/art/art-651c21935a87.png",
+  "w": 768,
+  "h": 768,
+  "sha256": "651c21935a878dc9f5fcab9446daddf5f7d4e660d55d8c9ac45288312f6abde2"
+ },
+ "art/特色-地磚-X底架(右).png": {
+  "url": "/assets/cyber-run/art/art-16e465f6feb6.png",
+  "w": 256,
+  "h": 256,
+  "sha256": "16e465f6feb6450dbd3d91b23f5a1e6e6d8e1c708d6d05762fbaf874bce6a9d3"
+ },
+ "art/特色-地磚-X底架.png": {
+  "url": "/assets/cyber-run/art/art-249374d4f8e9.png",
+  "w": 256,
+  "h": 256,
+  "sha256": "249374d4f8e952d399997397d0919e37dc98ed35c0f3fc792fddc26c69cbb35d"
+ },
+ "art/特色-地磚-底(牆).png": {
+  "url": "/assets/cyber-run/art/art-3b14a818abd4.png",
+  "w": 256,
+  "h": 256,
+  "sha256": "3b14a818abd4e2844e0257316998890ad26e10c864741f23e35e4e94031d7a3d"
+ },
+ "art/特色-地磚-底中(一格).png": {
+  "url": "/assets/cyber-run/art/art-b0cde2e4b7b6.png",
+  "w": 128,
+  "h": 256,
+  "sha256": "b0cde2e4b7b62f7d662b2bae92aad7f2209d84018fa89822466451ba30c539d1"
+ },
+ "art/特色-地磚-底中.png": {
+  "url": "/assets/cyber-run/art/art-33ae81c64690.png",
+  "w": 256,
+  "h": 256,
+  "sha256": "33ae81c646903f8b58b5b345294066fbd2095744f9746b70586fb2ebe07afadc"
+ },
+ "art/特色-地磚-底無牆(一格).png": {
+  "url": "/assets/cyber-run/art/art-c2dbe4064097.png",
+  "w": 128,
+  "h": 256,
+  "sha256": "c2dbe4064097303b7bca2d6b94328fb6d2744b9320cfbeb5d8a1a7f3b4bf30fc"
+ },
+ "art/特色-地磚-底牆.png": {
+  "url": "/assets/cyber-run/art/art-7b2cf8dc98a8.png",
+  "w": 256,
+  "h": 256,
+  "sha256": "7b2cf8dc98a8e49f4dee2f09e4a443e23e9c1f1841f4d68eed3f14c6259596be"
+ },
+ "art/特色-地磚-底邊(無柱).png": {
+  "url": "/assets/cyber-run/art/art-6456a90197cc.png",
+  "w": 256,
+  "h": 256,
+  "sha256": "6456a90197cc470ffde87f609ec302d0c898ac5e1df36cc44aa7016fbef694a3"
+ },
+ "art/特色-地磚-底邊.png": {
+  "url": "/assets/cyber-run/art/art-130c60317d69.png",
+  "w": 256,
+  "h": 256,
+  "sha256": "130c60317d698e0bcc817634492c4d814365f3eb9c10828a7e6b91dfb15556bf"
+ },
+ "art/特色-地磚-柱子-1(三格).png": {
+  "url": "/assets/cyber-run/art/art-2ebe3ee6e537.png",
+  "w": 256,
+  "h": 384,
+  "sha256": "2ebe3ee6e537bf2bf31f625ff8163c8d25408e5b8a7dc4331aca2db45450dce0"
+ },
+ "art/特色-地磚-柱子-1.png": {
+  "url": "/assets/cyber-run/art/art-72731589095c.png",
+  "w": 256,
+  "h": 256,
+  "sha256": "72731589095caabe5cf57b8283e2ff45d7d04761f6c2d6bc8ee24fec1a742993"
+ },
+ "art/特色-地磚-柱子-2(右).png": {
+  "url": "/assets/cyber-run/art/art-0bb528ccfdc7.png",
+  "w": 256,
+  "h": 256,
+  "sha256": "0bb528ccfdc7d740c9f1b04c99d69b5384e1618743854173ce945a3f38859f00"
+ },
+ "art/特色-地磚-柱子-2(左).png": {
+  "url": "/assets/cyber-run/art/art-bc56634f7150.png",
+  "w": 256,
+  "h": 256,
+  "sha256": "bc56634f71508ef1ea6bd1d66beeb55d7503ccbcf9e2440039d27aa9418145f1"
+ },
+ "art/特色-地磚-柱子底-2(中).png": {
+  "url": "/assets/cyber-run/art/art-bbe76c22192e.png",
+  "w": 256,
+  "h": 256,
+  "sha256": "bbe76c22192e0e35b4a50516e271716e8a42cc3a6d87f7c43e42036897c81a5a"
+ },
+ "art/特色-地磚-柱子底-2(中無).png": {
+  "url": "/assets/cyber-run/art/art-40a9e4471b7f.png",
+  "w": 256,
+  "h": 256,
+  "sha256": "40a9e4471b7fbafe001d261570ef4255d0488117c00629978489eca4ef35d808"
+ },
+ "art/特色-地磚-柱子底-2(右).png": {
+  "url": "/assets/cyber-run/art/art-75d1086d840f.png",
+  "w": 256,
+  "h": 256,
+  "sha256": "75d1086d840fcc0d27ff8f7bf49e677be0f35bc3367632c7083ff86162711d22"
+ },
+ "art/特色-地磚-柱子底-2(左).png": {
+  "url": "/assets/cyber-run/art/art-5dbdf85de501.png",
+  "w": 256,
+  "h": 256,
+  "sha256": "5dbdf85de501b26a64835de9b9dd9d9e009bba6f1eb49c5cd8a538778ad33c97"
+ },
+ "art/特色-地磚-樓梯中段.png": {
+  "url": "/assets/cyber-run/art/art-2bbab76ce7ec.png",
+  "w": 256,
+  "h": 256,
+  "sha256": "2bbab76ce7ec8d8a3cfe6e6f181613b8ac2f9c3289c7b80e876f45b99e27cdce"
+ },
+ "art/特色-地磚-氣窗.png": {
+  "url": "/assets/cyber-run/art/art-890e8c240d5b.png",
+  "w": 256,
+  "h": 256,
+  "sha256": "890e8c240d5b8d0a8b5d2ae2342a39957570055a32e9b6dc937e956efa48fb1f"
+ },
+ "art/特色-地磚-電箱.png": {
+  "url": "/assets/cyber-run/art/art-dfb3716cc0e2.png",
+  "w": 256,
+  "h": 256,
+  "sha256": "dfb3716cc0e23723cd73172f92ec881d81ded0503ce5d83aa231a80d35c41e4a"
+ },
+ "art/特色-地磚-頂(牆).png": {
+  "url": "/assets/cyber-run/art/art-95175c5e345e.png",
+  "w": 256,
+  "h": 256,
+  "sha256": "95175c5e345e2281751661f9745acb32945a17dda96518b76188a388a30eec3c"
+ },
+ "bg/主機1029全_視差_4160x2800.jpg": {
+  "url": "/assets/cyber-run/bg/bg-18a11efda521.jpg",
+  "w": 4160,
+  "h": 2800,
+  "sha256": "18a11efda52172122573b02456765aefe3c2112ce124c6c4b12f6d45661f3af4"
+ },
+ "chars/S2AM-1(待機微動).png": {
+  "url": "/assets/cyber-run/chars/chars-ae81137d8f01.png",
+  "w": 240,
+  "h": 347,
+  "sha256": "ae81137d8f019be77fe0173af313f8782b56fdc3252b6e4335074c5987a4e322"
+ },
+ "chars/S2AM-10(攻擊第二禎).png": {
+  "url": "/assets/cyber-run/chars/chars-c6a5bddf87a2.png",
+  "w": 240,
+  "h": 347,
+  "sha256": "c6a5bddf87a2853c56f99cfe171a4f4ec2eef39665dd26623cacb26f5c06817d"
+ },
+ "chars/S2AM-2(待機微動).png": {
+  "url": "/assets/cyber-run/chars/chars-ebaa900f7e76.png",
+  "w": 240,
+  "h": 347,
+  "sha256": "ebaa900f7e7659b2763cae7829296a09e60b611316c95ec6e4f1e0466299d0c5"
+ },
+ "chars/S2AM-3(動作轉身).png": {
+  "url": "/assets/cyber-run/chars/chars-87ab7403a7a6.png",
+  "w": 240,
+  "h": 347,
+  "sha256": "87ab7403a7a63a2a47a0a04fc9d5682b43b6c59b3057d5c55d640bd63255291f"
+ },
+ "chars/S2AM-4(跑動第一禎).png": {
+  "url": "/assets/cyber-run/chars/chars-4faa5be0afb1.png",
+  "w": 240,
+  "h": 347,
+  "sha256": "4faa5be0afb1e94016ef9007432bea6bf931e07ff44943c9ef936c41697e0365"
+ },
+ "chars/S2AM-5(跑動第二禎).png": {
+  "url": "/assets/cyber-run/chars/chars-d51f71e59af6.png",
+  "w": 240,
+  "h": 347,
+  "sha256": "d51f71e59af65c444604c1896b29497eaabd0fa61bf0ba40036a67f6c1fc4cb9"
+ },
+ "chars/S2AM-6(跳躍).png": {
+  "url": "/assets/cyber-run/chars/chars-dd3f18e2e7d1.png",
+  "w": 240,
+  "h": 347,
+  "sha256": "dd3f18e2e7d1c030a286e8ed79c2a9232fd66d975b7c915f4b69184b63691f3f"
+ },
+ "chars/S2AM-7(二段跳躍).png": {
+  "url": "/assets/cyber-run/chars/chars-eb81db5d44a5.png",
+  "w": 240,
+  "h": 347,
+  "sha256": "eb81db5d44a5da5b55361f74433c03a3b9239bcea16219893a75da7030110f92"
+ },
+ "chars/S2AM-8(跳躍落下).png": {
+  "url": "/assets/cyber-run/chars/chars-0dca09d08b12.png",
+  "w": 240,
+  "h": 347,
+  "sha256": "0dca09d08b126e4acc0c8d842197d1752a6d096de8ba3a4ec5531bb194dacf29"
+ },
+ "chars/S2AM-9(攻擊第一禎).png": {
+  "url": "/assets/cyber-run/chars/chars-4c1ceaff33f5.png",
+  "w": 240,
+  "h": 347,
+  "sha256": "4c1ceaff33f5d7b617871cae4a2d10a32cf3e288298f80a86812e0901a25cf44"
+ },
+ "chars/S3WW-1(待機微動).png": {
+  "url": "/assets/cyber-run/chars/chars-a27fda99a3bb.png",
+  "w": 240,
+  "h": 367,
+  "sha256": "a27fda99a3bb0e0730aaf271146fc62eb6527e7f361a27b7f70721c26a22c542"
+ },
+ "chars/S3WW-10(攻擊第二禎).png": {
+  "url": "/assets/cyber-run/chars/chars-109f7c09539e.png",
+  "w": 240,
+  "h": 367,
+  "sha256": "109f7c09539e4f856ac9835dd14b331cefdb50d5d775f268a809b230e790301d"
+ },
+ "chars/S3WW-2(待機微動).png": {
+  "url": "/assets/cyber-run/chars/chars-f3f08911497a.png",
+  "w": 240,
+  "h": 367,
+  "sha256": "f3f08911497a020b690906a63c0505409c73dfbd3bb59f55fddab7290df0ddbf"
+ },
+ "chars/S3WW-3(動作轉身).png": {
+  "url": "/assets/cyber-run/chars/chars-bac5a192b28c.png",
+  "w": 240,
+  "h": 367,
+  "sha256": "bac5a192b28c8a9d65ca65770e63aaa3e6bbb01e03c017caa153069d32bdf8ed"
+ },
+ "chars/S3WW-4(跑動第一禎).png": {
+  "url": "/assets/cyber-run/chars/chars-6c56bada83c4.png",
+  "w": 240,
+  "h": 367,
+  "sha256": "6c56bada83c4ebff528141dcacd50f8087ca5035ab7e2cb6f0eaeef35aa3f032"
+ },
+ "chars/S3WW-5(跑動第二禎).png": {
+  "url": "/assets/cyber-run/chars/chars-2d9a53d7c56e.png",
+  "w": 240,
+  "h": 367,
+  "sha256": "2d9a53d7c56ea70137a024d9528aab20971d8579062388813d6413e4d8d941e9"
+ },
+ "chars/S3WW-6(跳躍).png": {
+  "url": "/assets/cyber-run/chars/chars-b005f88becc5.png",
+  "w": 240,
+  "h": 367,
+  "sha256": "b005f88becc510f9a49c5d358fc7925a5a7584b26b72d3f77741219dabb7c512"
+ },
+ "chars/S3WW-7(二段跳躍).png": {
+  "url": "/assets/cyber-run/chars/chars-42091f6d17fb.png",
+  "w": 240,
+  "h": 367,
+  "sha256": "42091f6d17fbd2c120ea5a9e8e9df30716f1bf3aaba9871a92819fa0d15da6dd"
+ },
+ "chars/S3WW-8(跳躍落下).png": {
+  "url": "/assets/cyber-run/chars/chars-73148d929eac.png",
+  "w": 240,
+  "h": 367,
+  "sha256": "73148d929eacca8b8d43241f995e8b7a79b6117ce2cd15977f9e6ea9ebf95056"
+ },
+ "chars/S3WW-9(攻擊第一禎).png": {
+  "url": "/assets/cyber-run/chars/chars-13649a1d8cb5.png",
+  "w": 240,
+  "h": 367,
+  "sha256": "13649a1d8cb5153fcb90396eb939bf00fad59dfa44e6a3ee0e4bfaa263d3aeca"
+ },
+ "items/logo水晶_2.png": {
+  "url": "/assets/cyber-run/items/items-534e24432900.png",
+  "w": 282,
+  "h": 282,
+  "sha256": "534e24432900b25728d43fd40194659e5804d4b4aa21b13ead28ebd099b74c3f"
+ },
+ "items/攻擊道具/A_ROG CROSSHAIR X870E DARK HERO.png": {
+  "url": "/assets/cyber-run/items/items-d70da0a2ecf2.png",
+  "w": 256,
+  "h": 256,
+  "sha256": "d70da0a2ecf2a4ca6a3a81624dd1331baef5d584b0c2d42448594664160c9c77"
+ },
+ "items/攻擊道具/A_ROG Swift OLED.png": {
+  "url": "/assets/cyber-run/items/items-aab0fedaba7a.png",
+  "w": 256,
+  "h": 256,
+  "sha256": "aab0fedaba7aba40402fc4423cc82674f355ada86e8958ec99d6821fdf0ff37e"
+ },
+ "items/攻擊道具/B_ALLY.png": {
+  "url": "/assets/cyber-run/items/items-a2bd4131d2dc.png",
+  "w": 256,
+  "h": 256,
+  "sha256": "a2bd4131d2dc7662fc2ce6171ff4080d218acebff73552be32b01019376c87cc"
+ },
+ "items/攻擊道具/B_VGA.png": {
+  "url": "/assets/cyber-run/items/items-0563e2e51e3d.png",
+  "w": 256,
+  "h": 256,
+  "sha256": "0563e2e51e3de32fb18a46cce73fb04d1e3dee52e9a900a5a325a6823d765b35"
+ },
+ "items/攻擊道具/C_ROG Chakram X Origin.png": {
+  "url": "/assets/cyber-run/items/items-bd3e602d7592.png",
+  "w": 256,
+  "h": 256,
+  "sha256": "bd3e602d75924b94ee80141a84f81558956cf5e266f8828ef627c8e904d8f296"
+ },
+ "items/能量水晶_1.png": {
+  "url": "/assets/cyber-run/items/items-036376d4fcaf.png",
+  "w": 128,
+  "h": 128,
+  "sha256": "036376d4fcaf0a07791b3504b16e093ab23155209f612cd3b9ea3b7daca337ee"
+ },
+ "items/能量護罩.png": {
+  "url": "/assets/cyber-run/items/items-6d4e72279a71.png",
+  "w": 243,
+  "h": 243,
+  "sha256": "6d4e72279a719dd6cff1928e2c7f30d3fc396b18ebeb40d75a978f7e5c0a1ba2"
+ },
+ "monsters/眼魔 BEHOLDER_0.png": {
+  "url": "/assets/cyber-run/monsters/monsters-b43eb789212c.png",
+  "w": 320,
+  "h": 320,
+  "sha256": "b43eb789212cdee2f5ffd67c36ca3f1610ab74bab319ab5eadf3d0a639997e81"
+ },
+ "monsters/眼魔 BEHOLDER_1.png": {
+  "url": "/assets/cyber-run/monsters/monsters-70ea55c35854.png",
+  "w": 320,
+  "h": 320,
+  "sha256": "70ea55c35854a5fada17d131699c5eb16ee19a526a530bcdcf3d90d0dfb7c012"
+ },
+ "monsters/眼魔 BEHOLDER_2.png": {
+  "url": "/assets/cyber-run/monsters/monsters-50e1cbeb7067.png",
+  "w": 320,
+  "h": 320,
+  "sha256": "50e1cbeb70672359d5787df152119ff050015eaed1c80a795995f042c63ade10"
+ },
+ "monsters/魔蛛_0.png": {
+  "url": "/assets/cyber-run/monsters/monsters-cf284aad26d5.png",
+  "w": 256,
+  "h": 256,
+  "sha256": "cf284aad26d580ad71a8d71825b5dead0bba59c88f8d84f51e3acae45986b49e"
+ },
+ "monsters/魔蛛_1.png": {
+  "url": "/assets/cyber-run/monsters/monsters-65dea8529c3e.png",
+  "w": 256,
+  "h": 256,
+  "sha256": "65dea8529c3ecd64681a06a4a9118aaf61050f3be30cbf8019db3cab178ed192"
+ },
+ "monsters/魔蛛_2.png": {
+  "url": "/assets/cyber-run/monsters/monsters-c5a0316c3519.png",
+  "w": 256,
+  "h": 256,
+  "sha256": "c5a0316c3519405d0b393c7f4a5f0e530b96b46df2b8d88e435397f98703ed18"
+ }
+}

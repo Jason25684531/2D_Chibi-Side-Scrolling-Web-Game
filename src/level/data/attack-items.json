@@ -1,0 +1,122 @@
+{
+ "_說明": "攻擊道具（流程第二頁的選單＋丟出去的攻擊）設定。level_editor.html 啟動時讀這個檔（讀不到就用程式內建的同一份預設值）。長度單位：格（1 格 = 64px）；時間單位：秒；角度：度。",
+ "_攻擊模式": "依圖檔名前綴自動套用：A_ → A（拋物範圍 Arc Impact／AREA）、B_ → B（旋轉穿透 Spin Pierce／PIERCE）、C_ → C（高速連射 Rapid Shot／RAPID）；沒有前綴 → default（舊版預設，數值和 11/01 以前完全一樣，用 range 不用倍率）。",
+ "items": [
+  {
+   "src": "B_ALLY.png",
+   "name": "ROG Xbox Ally",
+   "feat": "掌上型遊戲機"
+  },
+  {
+   "src": "C_ROG Chakram X Origin.png",
+   "name": "ROG Chakram X Origin",
+   "feat": "電競滑鼠"
+  },
+  {
+   "src": "A_ROG CROSSHAIR X870E DARK HERO.png",
+   "name": "CROSSHAIR X870E",
+   "feat": "DARK HERO 主機板"
+  },
+  {
+   "src": "A_ROG Swift OLED.png",
+   "name": "ROG Swift OLED",
+   "feat": "電競螢幕"
+  },
+  {
+   "src": "B_VGA.png",
+   "name": "ROG Astral",
+   "feat": "顯示卡"
+  }
+ ],
+ "_items": "選單順序與顯示名稱。圖放在 items/攻擊道具/，畫面上的大小一律沿用 PICKUP_ART.laptop（選單 1.9 格寬、丟出 1.3 格寬），不因模式不同放大縮小，也不裁透明邊。",
+ "modes": {
+  "A": {
+   "name": "拋物範圍 Arc Impact",
+   "tag": "AREA",
+   "color": "#ffb347",
+   "speed": 10,
+   "rangeMult": 1.0,
+   "cooldown": 0.8,
+   "height": 0.8,
+   "lift": 2.5,
+   "gravity": 7.7,
+   "spin": 0,
+   "hitbox": [
+    0.6,
+    0.7
+   ],
+   "knock": 5,
+   "shake": 0,
+   "trail": 2,
+   "burst": {
+    "scale": 1.2,
+    "time": 0.2,
+    "size": [
+     1.3,
+     1.3
+    ]
+   }
+  },
+  "B": {
+   "name": "旋轉穿透 Spin Pierce",
+   "tag": "PIERCE",
+   "color": "#4dd9ff",
+   "speed": 12,
+   "rangeMult": 1.1,
+   "cooldown": 0.55,
+   "height": 1.0,
+   "lift": 0,
+   "gravity": 0,
+   "spin": 720,
+   "hitbox": [
+    0.6,
+    0.7
+   ],
+   "knock": 5,
+   "shake": 0,
+   "trail": 2,
+   "pierce": 2,
+   "glowTrail": true
+  },
+  "C": {
+   "name": "高速連射 Rapid Shot",
+   "tag": "RAPID",
+   "color": "#c6ff4d",
+   "speed": 16,
+   "rangeMult": 0.8,
+   "cooldown": 0.25,
+   "height": 1.0,
+   "lift": 0,
+   "gravity": 0,
+   "spin": 0,
+   "hitbox": [
+    0.5,
+    0.7
+   ],
+   "knock": 2.5,
+   "shake": 0,
+   "trail": 3,
+   "flash": true
+  },
+  "default": {
+   "name": "預設（無前綴）",
+   "speed": 14,
+   "range": 8.4,
+   "cooldown": 0.4,
+   "height": 1.4,
+   "lift": 0,
+   "gravity": 0,
+   "spin": 792,
+   "hitbox": [
+    0,
+    0.6
+   ],
+   "knock": 0,
+   "shake": 0,
+   "trail": 2
+  }
+ },
+ "_modes": "speed＝飛行速度（格/秒）；rangeMult＝射程倍率（× baseRange；default 用 range＝射程格數）；cooldown＝攻擊間隔；height＝出手高度（離玩家腳底幾格）；lift＝出手時往上的速度（格/秒）；gravity＝重力（格/秒²，0＝水平直飛）；spin＝自轉（度/秒，0＝保持原圖方向）；hitbox＝碰撞框寬高（格，和圖片顯示大小分開）；knock＝命中時把怪擊退的速度（格/秒）；shake＝命中時畫面震動秒數；trail＝飛行殘影數；burst＝落地範圍攻擊（只有 A）：size＝範圍判定的原始大小（格，＝道具圖原本的顯示大小 1.3 格），scale＝放大倍率（判定框＝size × scale；落地圖片也以畫布中心放大同一倍率），time＝維持秒數，期間框內的怪全部打到；飛行中直接打中怪時，範圍以那隻怪的中心展開。A 的拋物線：離腳底 0.8 格出手、往上 2.5 格/秒、重力 7.7 格/秒²，約 2.6 格處最高 1.21 格，約 8 格（＝D）處碰撞框底碰到地面＝落地；途中直接打到怪也會在那裡展開範圍判定。 tag／color＝拾取文字、HUD 類型標籤與特效顏色；pierce＝一次投擲最多打到幾隻不同的怪（同一隻不重複判定，沒寫＝1）；glowTrail＝旋轉光軌；flash＝命中白色閃光。拾取攻擊道具時人物周圍出現 0.3 秒光圈並跳出 tag 文字；持有規則不變（被打到就失去）。",
+ "baseRange": 8,
+ "_baseRange": "基準射程 D（格）。A／B／C 的實際水平射程＝D × rangeMult（A 1.0、B 1.1、C 0.8）；射程和速度分開：存活時間＝射程 ÷ 速度。"
+}

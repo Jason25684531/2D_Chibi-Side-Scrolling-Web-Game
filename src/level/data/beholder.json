@@ -1,0 +1,45 @@
+{
+ "_說明": "眼魔 BEHOLDER 的圖片與動作設定。level_editor.html 啟動時讀這個檔（讀不到就用程式內建的同一份預設值）。長度單位：格（1 格 = 64px）；時間單位：秒。眼魔是巡邏怪（10/28 取代灰塵怪）：機身在放置的格子裡，勾「漂浮」才往上飄。",
+ "id": "beholder",
+ "name": "眼魔 BEHOLDER",
+ "frames": ["眼魔 BEHOLDER_0.png", "眼魔 BEHOLDER_1.png", "眼魔 BEHOLDER_2.png"],
+ "_frames": "frames 的路徑相對於這個 json。原圖 512×512，圖中心＝身體中心。",
+ "size": 2.5,
+ "_size": "整張圖畫在畫面上的邊長（格）。",
+ "facing": "left",
+ "_facing": "原圖朝向。追擊往右時自動鏡射。",
+ "float": false,
+ "_float": "新放的眼魔預設要不要漂浮（每隻都可在屬性分頁單獨勾「漂浮」）。不漂浮＝機身在放置的格子裡、不上下動，只切換 BEHOLDER_0／1（追擊 _2）；漂浮＝往上 ai.hover 格並上下飄（actions 的 bob）。",
+ "hitbox": [1.6, 1.1],
+ "_hitbox": "碰撞框寬、高（格），以身體中心為中心。",
+ "actions": {
+  "patrol": { "frames": [0, 1], "fps": 4, "bob": { "amp": 0.15, "period": 1.6 }, "_": "巡邏（待命）：0、1 交替，在平台上左右來回；bob＝上下飄（只有勾「漂浮」的眼魔才飄）" },
+  "idle":   { "frames": [0, 1], "fps": 4, "bob": { "amp": 0.15, "period": 1.6 }, "_": "編輯器裡顯示用（同巡邏）" },
+  "chase":  { "frames": [2], "fps": 0, "bob": { "amp": 0.06, "period": 0.7 }, "_": "追擊：BEHOLDER_2，面向角色，沿平台靠近" },
+  "charge": { "frames": [2], "fps": 0, "bob": { "amp": 0.02, "period": 0.3 }, "_": "射光前蓄力：停住、砲口聚光、瞄準線" },
+  "fire":   { "frames": [2], "fps": 0, "bob": { "amp": 0, "period": 1 }, "_": "射光：光束持續期間停住" }
+ },
+ "ai": {
+  "hover": 1,
+  "contentBottom": 0.33,
+  "patrol": 2,
+  "chase": 3.2,
+  "sight": 7,
+  "lose": 11,
+  "giveUp": 1.2,
+  "_": "hover＝勾「漂浮」時往上飄幾格；contentBottom＝圖裡機身下緣離圖中心多遠（以圖邊長為 1，對齊離地高度用）；patrol／chase＝巡邏／追擊速度（格/秒，灰塵怪是 2）；sight＝發現角色的距離；lose＝超過這距離就放棄追、回去巡邏；giveUp＝看不到角色幾秒就放棄。巡邏和追擊都只在所站的平台上左右移動（碰牆、平台邊緣停下或回頭），跟灰塵怪一樣。"
+ },
+ "laser": {
+  "enabled": true,
+  "range": 8,
+  "charge": 0.7,
+  "lock": 0.25,
+  "fire": 0.35,
+  "cooldown": 2.2,
+  "width": 0.22,
+  "keepAway": 0.55,
+  "origin": [-0.35, 0.16],
+  "color": "#ff3b6b",
+  "_": "射光（遠距攻擊），每隻眼魔可在屬性面板關掉或改距離（覆蓋這裡的 enabled / range）。charge＝蓄力秒數，最後 lock 秒瞄準鎖定（可閃）；fire＝光束持續；cooldown＝兩次射擊間隔；width＝光束寬（格）；keepAway＝開射光時追到 range×keepAway 就不再靠近；origin＝砲口位置（相對圖中心，以圖邊長為 1，朝左時）。"
+ }
+}

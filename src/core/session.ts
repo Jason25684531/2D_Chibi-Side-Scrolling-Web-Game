@@ -5,14 +5,13 @@ import {DamageSystem} from '../damage/system';
 import {PowerUpSystem} from '../powerup/system';
 import {ComboSystem} from '../combo/system';
 import {ScoreEngine} from '../score/engine';
-import type {EnemyKind,PowerKind} from '../level/data';
+import type {PowerKind} from '../level/data';
 import {TEST_PROFILE as P} from './config';
 export type GameplayResult=Readonly<{schemaVersion:1;sessionId:string;attemptId:string;runId:string;timeTier:string;duration:number;endReason:'goal'|'time-up';remainingTime:number;heldBadgeCount:number;score:number;scoreBreakdown:Readonly<ScoreEngine['breakdown']>;badgeDropOccurred:boolean;playerStatistics:Readonly<GameplaySession['stats']>;rulesStatus:'test-only';unresolvedRuleIds:readonly string[]}>;
 export class GameplaySession {
   run:RunStateManager;events:GameplayEventBus;
   badges=new BadgeSystem();damage=new DamageSystem();power=new PowerUpSystem();combo=new ComboSystem();score:ScoreEngine;
-  stats={kills:0,stomps:0,damage:0,respawns:0,pickups:0,maxCombo:0,paralyses:0,bounces:0};result:GameplayResult|null=null;private serial=0;
-  readonly paralyzedIds=new Set<string>();
+  stats={kills:0,stomps:0,bolts:0,damage:0,respawns:0,pickups:0,maxCombo:0,bounces:0};result:GameplayResult|null=null;private serial=0;
   constructor(duration:number,sessionId:string,readonly tutorial=false){this.run=new RunStateManager(duration,sessionId);this.run.start();this.events=new GameplayEventBus(this.run.runId);this.score=new ScoreEngine(this.run.scoredEnemyIds);}
   emit(kind:EventKind,entityId:string,cause:string){this.events.publish({kind,entityId,cause,runId:this.run.runId,eventId:`${this.run.runId}:${this.serial++}`,tick:this.run.tick});}
   private deadlineThisTick=false;
@@ -25,16 +24,15 @@ export class GameplaySession {
     if(this.run.remaining<=1e-8){this.run.remaining=0;if(!deferTerminal)this.finish('time-up');}
   }
   pickup(id:string){if(this.run.phase!=='running'||!this.badges.pickup(id,this.run.elapsed))return false;this.stats.pickups++;this.emit('BADGE_COLLECTED',id,'overlap');return true;}
-  credit(id:string,kind:EnemyKind,ally=false){if(this.tutorial||this.run.phase!=='running'||!this.score.credit(id,kind,this.combo,this.run.elapsed,ally))return false;this.stats.kills++;if(!ally)this.stats.stomps++;this.stats.maxCombo=Math.max(this.stats.maxCombo,this.combo.count);this.emit('ENEMY_DEFEATED',id,'first-credit');return true;}
-  paralyze(id:string){if(!this.tutorial&&!this.paralyzedIds.has(id)){this.paralyzedIds.add(id);this.stats.paralyses++;}}
+  credit(id:string,how:'stomp'|'bolt'|'ally'='stomp'){if(this.tutorial||this.run.phase!=='running'||!this.score.credit(id,this.combo,this.run.elapsed))return false;this.stats.kills++;if(how==='stomp')this.stats.stomps++;if(how==='bolt')this.stats.bolts++;this.stats.maxCombo=Math.max(this.stats.maxCombo,this.combo.count);this.emit('ENEMY_DEFEATED',id,'first-credit');return true;}
   activate(kind:PowerKind,id:string){if(this.run.phase!=='running')return;this.power.activate(kind,this.run.elapsed);this.emit('POWERUP_ACTIVATED',id,kind);}
   hit(cause:string){
     if(this.run.phase!=='running')return {kind:'immune',drops:[] as string[]};
     const kind=this.damage.take(this.run.elapsed,this.badges,this.power);if(kind==='immune')return {kind,drops:[] as string[]};
-    this.stats.damage++;if(this.power.kind==='laptop')this.power.clear(); // UX p9: Laptop ends when touched
+    this.stats.damage++;this.power.disarm();this.combo.reset(); // planning v0.3: a hit loses the attack item and the Combo
     this.emit('PLAYER_DAMAGED','player',cause);
     const drops=kind==='scatter'?this.badges.scatter(this.run.elapsed):[];
-    if(drops.length){this.combo.reset();this.emit('BADGE_SCATTERED','player',cause);}return {kind,drops};
+    if(drops.length)this.emit('BADGE_SCATTERED','player',cause);return {kind,drops};
   }
   respawn(cause:string){
     if(this.run.phase!=='running')return false;

@@ -1,6 +1,7 @@
-export type Action = 'left'|'right'|'jump'|'dash'|'throw'|'pause'|'home'|'confirm'|'back';
-export type Actions = { move: number; movePressed?:boolean; jumpHeld: boolean; jump: boolean; dash: boolean; throw: boolean; pause: boolean; home: boolean; confirm:boolean; back:boolean };
-const KEYS: Record<string, Action> = { ArrowLeft:'left', KeyA:'left', ArrowRight:'right', KeyD:'right', Space:'jump', ArrowUp:'jump', ShiftLeft:'dash', ShiftRight:'dash', KeyJ:'throw', Escape:'pause', KeyH:'home' };
+export type Action = 'left'|'right'|'down'|'jump'|'dash'|'throw'|'pause'|'home'|'confirm'|'back';
+export type Actions = { move: number; movePressed?:boolean; jumpHeld: boolean; jump: boolean; down: boolean; dash: boolean; throw: boolean; pause: boolean; home: boolean; confirm:boolean; back:boolean };
+const KEYS: Record<string, Action> = { ArrowLeft:'left', KeyA:'left', ArrowRight:'right', KeyD:'right', Space:'jump', ArrowUp:'jump', ShiftLeft:'dash', ShiftRight:'dash', KeyJ:'throw', Escape:'pause', KeyH:'home',
+  KeyZ:'jump', KeyX:'dash', KeyC:'throw', ArrowDown:'down' }; // planning v0.3 keys: ← → Z X C ↓
 KEYS.Enter='confirm';KEYS.Backspace='back';
 export type Pad = { axes: readonly number[]; buttons: readonly { pressed: boolean }[] };
 export class InputAdapter {
@@ -28,9 +29,10 @@ export class InputAdapter {
     const press = (i: number) => pad?.buttons[i]?.pressed ?? false;
     if ((pad?.axes[0] ?? 0) < -this.deadzone || press(14)) now.add('left');
     if ((pad?.axes[0] ?? 0) > this.deadzone || press(15)) now.add('right');
+    if ((pad?.axes[1] ?? 0) > this.deadzone || press(13)) now.add('down');
     for (const [i, action] of [[0,'confirm'],[1,'jump'],[3,'dash'],[2,'throw'],[9,'pause'],[8,'home'],[4,'back']] as const) if (press(i)) now.add(action);
     const edge = (action: Action) => this.pending.has(action) || (now.has(action) && !this.previous.has(action));
-    const value = { move: Number(now.has('right')||this.pending.has('right')) - Number(now.has('left')||this.pending.has('left')), movePressed:edge('left')||edge('right'), jumpHeld: now.has('jump'), jump:edge('jump'), dash:edge('dash'), throw:edge('throw'), pause:edge('pause'), home:edge('home'),confirm:edge('confirm'),back:edge('back') };
+    const value = { move: Number(now.has('right')||this.pending.has('right')) - Number(now.has('left')||this.pending.has('left')), movePressed:edge('left')||edge('right'), jumpHeld: now.has('jump'), jump:edge('jump'), down:edge('down'), dash:edge('dash'), throw:edge('throw'), pause:edge('pause'), home:edge('home'),confirm:edge('confirm'),back:edge('back') };
     this.previous = now; this.pending.clear(); return value;
   }
 }

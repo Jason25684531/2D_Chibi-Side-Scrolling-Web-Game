@@ -8,7 +8,7 @@ async function openBoard(page:Page){
   await page.evaluate(()=>{const u=(window as any).__station;u.result=u.scene.session.finish('goal');u.go('P5');u.go('P6');u.go('P7');u.act('ranking');});
 }
 for(const count of [0,3,11,21])test(`local ranking ${count} rows, pagination, escaped names and safe area`,async({page})=>{
-  await page.addInitScript(({key,count})=>localStorage.setItem(key,JSON.stringify({schemaVersion:1,records:Array.from({length:count},(_,i)=>({runId:`fixture-${i}`,nickname:i===0?'<b>中文 & Player</b>':'玩家測試名字 Player '+i,score:1000-i,tier:'90',titles:[],characterId:'aria'}))})),{key,count});
+  await page.addInitScript(({key,count})=>localStorage.setItem(key,JSON.stringify({schemaVersion:1,records:Array.from({length:count},(_,i)=>({runId:`fixture-${i}`,nickname:i===0?'<b>中文 & Player</b>':'玩家測試名字 Player '+i,score:1000-i,tier:'100',titles:[],characterId:'a'}))})),{key,count});
   await page.goto('/');await openBoard(page);
   await expect(page.locator('.full-ranking .rank-row')).toHaveCount(Math.min(count,10));
   await expect(page.locator('.podium-card')).toHaveCount(Math.min(count,3));

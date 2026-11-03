@@ -1,34 +1,28 @@
 import Phaser from 'phaser';
-import manifest from '../../assets/character-manifest.json';
-export const characters=manifest.characters;
-// The manifest controls presentation; URL parameters never alter collision bodies.
-export function preloadCharacters(scene:Phaser.Scene) {
-  if(manifest.presentationMode!=='sprites')return;
-  for(const c of characters)scene.load.spritesheet(c.id,c.atlas.plannedBrowserUrl,{frameWidth:256,frameHeight:256});
-}
+import level from '../level/data/level.json';
+import {TILE as T} from '../core/config';
+import {CHARACTERS} from './catalog';
+type Action={frames:string[];fps?:number;dur?:number};
+const ACTION:Record<string,string>={IDLE:'idle',RUN:'run',JUMP:'jump',DOUBLE_JUMP:'djump',FALL:'fall',HURT:'fall',DASH:'dash',WIN:'idle'};
+// Planning v0.3 §6.1: 10 frames per character, drawn 2.5 cells tall with the image bottom on the collision-box bottom.
 export class CharacterView {
-  label:Phaser.GameObjects.Text;
-  visual:Phaser.GameObjects.Rectangle;
-  sprite?:Phaser.GameObjects.Sprite;
-  private character:typeof characters[number];
-  constructor(scene:Phaser.Scene,private box:Phaser.GameObjects.Rectangle,id:string) {
-    this.character=characters.find(c=>c.id===id)??characters[0];
-    box.setAlpha(0);
-    this.visual=scene.add.rectangle(box.x,box.y,48,48,0x000000).setStrokeStyle(2,0xff003c).setDepth(5);
-    this.label=scene.add.text(0,0,'PLAYER',{fontSize:'12px',color:'#ffffff'}).setOrigin(.5,1).setDepth(10);
-    if(manifest.presentationMode==='sprites'&&scene.textures.exists(this.character.id)){
-      this.sprite=scene.add.sprite(box.x,box.y,this.character.id).setOrigin(.5,1).setDepth(5);
-      for(const [action,anim] of Object.entries(this.character.animations)){
-        const key=`${this.character.id}-${action}`;
-        if(!scene.anims.exists(key))scene.anims.create({key,frames:anim.frames.map(f=>({key:this.character.id,frame:(f.y/256)*6+f.x/256})),frameRate:this.character.sourceFps,repeat:anim.loop?-1:0});
-      }
-    }
+  sprite:Phaser.GameObjects.Image;shield:Phaser.GameObjects.Image;
+  private c:typeof CHARACTERS.a;private action='';private since=0;private attackAt=-1;
+  constructor(scene:Phaser.Scene,private box:Phaser.GameObjects.Rectangle,id:string,debug=false) {
+    this.c=CHARACTERS[id==='b'?'b':'a'];box.setAlpha(debug?.4:0);
+    this.sprite=scene.add.image(box.x,box.y,'chars/'+this.c.frames.idle1).setOrigin(.5,1).setDepth(5);
+    const s=level.itemArt.shield;this.shield=scene.add.image(box.x,box.y,'items/'+s.art).setDepth(6).setVisible(false);
+    this.shield.setDisplaySize(s.w*T,s.w*T);
   }
-  update(state:string,facing:number,scale:number) {
-    this.visual.setPosition(this.box.x,this.box.y+this.box.displayHeight/2-24*scale).setScale(scale);
-    this.label.setPosition(this.box.x,this.visual.y-24*scale-5).setText(`PLAYER · ${state}`).setVisible(!this.sprite);
-    const action=this.character.stateBindings[state as keyof typeof this.character.stateBindings];
-    this.visual.setVisible(!this.sprite||!action);
-    if(this.sprite){this.sprite.setVisible(!!action).setPosition(this.box.x,this.box.y+this.box.displayHeight/2).setScale(.32*scale).setFlipX(facing<0);if(action)this.sprite.play(`${this.character.id}-${action}`,true);}
+  attack(now:number){this.attackAt=now;}
+  update(state:string,facing:number,now:number,ally=false) {
+    const a=this.c.actions as Record<string,Action>,attacking=this.attackAt>=0&&now-this.attackAt<(a.attack.dur??.3);
+    const name=attacking?'attack':ACTION[state]??'idle';if(name!==this.action){this.action=name;this.since=now;}
+    const act=a[name]??a.idle,t=now-this.since,i=act.fps?Math.floor(t*act.fps):0;
+    const frame=attacking?act.frames[Math.min(i,act.frames.length-1)]:act.frames[i%act.frames.length];
+    const bottom=this.box.y+this.box.displayHeight/2;
+    this.sprite.setTexture('chars/'+(this.c.frames as Record<string,string>)[frame]).setPosition(this.box.x,bottom);
+    this.sprite.setScale(this.c.height*T/this.sprite.height).setFlipX(facing<0&&!this.c.noFlip.includes(frame)).setAngle(name==='dash'?facing*6:0);
+    this.shield.setVisible(ally).setPosition(this.box.x,this.box.y).setAngle(now*90);
   }
 }
