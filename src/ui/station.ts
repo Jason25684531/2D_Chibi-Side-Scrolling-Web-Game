@@ -126,7 +126,7 @@ export class StationUI {
     if(this.flow.flow==='P3'&&!this.menu){
       const loaded=this.game.registry.get('assetsReady');
       if(loaded&&!this.game.scene.isActive('Gameplay'))this.start(true);
-      const progress=this.ui.querySelector<HTMLProgressElement>('progress');if(progress)progress.value=this.game.registry.get('loadProgress')??0;
+      const progress=this.ui.querySelector<HTMLProgressElement>('progress'),value=this.game.registry.get('loadProgress')??0;if(progress)progress.value=value;text(this.ui,'load-pct',Math.round(value*100)+'%');
       text(this.ui,'loading',loaded?'所需遊戲素材已載入':this.game.registry.get('loadError')?'素材載入失敗':'載入中');
       if(this.game.scene.isActive('Gameplay')&&this.scene.session){
         const s=this.scene;
@@ -200,7 +200,10 @@ export class StationUI {
         body=this.shell('','',`<div class="p0-title"><h1>CYBER <span>RUN</span></h1><p>電域狂奔<small>FOR THOSE WHO DARE</small></p></div><div class="wall">${wall.map((r,i)=>`<div class="wcard"><span class="idx">${String(i+1).padStart(2,'0')}</span><img src="${pose(r.characterId)}" alt=""><div class="name"><strong title="${escape(r.nickname)}">${escape(r.nickname)}</strong><span class="title">${escape(r.titles[0]??'超新星')}</span></div></div>`).join('')||'<div class="wcard empty"><p>成為下一位<br>Future Gamer<small>NEXT PLAYER WANTED</small></p></div>'}</div><section class="panel top20"><h2>TOP 20<small> / ${this.tier} 秒</small></h2>${this.ranking(true)}${paged?`<div class="page"><b>${this.rankPage+1}</b> / 2 · 每 10 秒換頁</div>`:''}</section><div class="notice"><i>i</i><div><strong>目前沒有玩家排隊，歡迎參觀 ROG FUTURE GAMER</strong><small>NO PLAYERS IN QUEUE · FEEL FREE TO EXPLORE</small></div></div><div class="demo">${button('demo','加入示範佇列','DEMO QUEUE',false,'ghost')}</div>`,'standby',chip(`Replay ${this.adapter.replayEnabled?'開啟':'關閉'}`,'red'))+(this.attract?`<video class="attract" src="${'/assets/cyber-run/attract.mp4'}" autoplay muted loop playsinline aria-label="首頁待機巡覽" onerror="this.remove()"></video>`:'');break;
       }
       case 'P1':body=this.readiness();break;
-      case 'P3':{const lessons=this.game.scene.isActive('Gameplay')&&this.scene.session?.tutorial?this.lessons():[];body=this.shell('新手訓練場','TRAINING / 框1 AIO・練習',`<div class="columns">${panel(nickname,avatar(character)+'<p id="loading" role="status">載入中</p><progress class="progress" aria-label="素材載入進度" max="1" value="0"></progress>')}<div class="tutorial-window"><span>LIVE TRAINING / 自由練習</span></div></div><div class="lesson-grid" style="grid-template-columns:repeat(${Math.max(1,lessons.length)},1fr)">${lessons.map(([zh,en,key])=>`<div class="lesson" data-lesson="${zh}"><b>${en}</b><span>${key}</span><small class="lesson-state">尚未開始</small></div>`).join('')}</div><p id="tutorial-progress"></p><div id="countdown" class="countdown"></div>`,'tutorial');break;}
+      case 'P3':{
+        const lessons=this.game.scene.isActive('Gameplay')&&this.scene.session?.tutorial?this.lessons():[];
+        body=this.shell('新手訓練場','TUTORIAL SANDBOX',`<section class="panel player">${avatar(character)}<div class="who">${nickname}<small>${characterName(character)} · ${escape(this.item.name)}</small></div><div class="load"><span><span id="loading" role="status">載入中</span><b id="load-pct">0%</b></span><progress class="progress" aria-label="素材載入進度" max="1" value="0"></progress></div></section><div class="sandbox"><span class="label"><i></i>LIVE TRAINING · 自由練習</span><div id="countdown" class="cd"></div></div><div class="lessons"><div class="head"><b>新手訓練清單</b><small>TUTORIAL CHECKLIST</small><span id="tutorial-progress"></span></div><div class="lesson-grid" style="grid-template-columns:repeat(${Math.max(1,lessons.length)},1fr)">${lessons.map(([zh,en,key])=>`<div class="lesson" data-lesson="${zh}"><b>${zh}<small>${en}</small></b><kbd>${key}</kbd><small class="lesson-state">尚未開始</small></div>`).join('')}</div></div>`,'tutorial',chip(`${nickname} · ${this.tier} s`));break;
+      }
       case 'P4':body=hud(this.adapter.current?.attackItem??ATTACK_ITEMS[0].src);break;
       case 'P5':{
         const r=this.result,goal=r?.endReason==='goal';
