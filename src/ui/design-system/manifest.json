@@ -5,7 +5,7 @@
   "gameSize": [960,540],
   "safeArea": [96,54,96,54],
   "tokens": "tokens.css",
-  "specification": "DESIGN.md",
+  "specification": "../../../DESIGN.md",
   "assets": [
     {"id":"characters","status":"existing","source":"webUIUX_Ref/characters","characters":["aria","kael","riven"],"purpose":"selection, avatar, world presentation","preserveOriginal":true},
     {"id":"dog","status":"existing","source":"webUIUX_Ref/element_img/Emeny_Dog.png","purpose":"enemy appearance only"},
@@ -13,8 +13,7 @@
     {"id":"laboratory","status":"required-placeholder","size":[960,1100],"layers":3,"source":"src/assets/laboratory.ts","purpose":"independent cached tiled parallax textures; replace with approved laboratory art"},
     {"id":"props","status":"required-placeholder","source":"src/assets/laboratory.ts","purpose":"editable Phaser geometry sized to existing level: mechanical arm, goal, laptop, ally and bounce decoration"},
     {"id":"avatars","status":"existing","size":[256,256],"source":"webUIUX_Ref/characters/{id}/hero_action_bundle/processed/idle/{id}-idle-01.png","runtime":"public/assets/ui/{id}.png","purpose":"unchanged transparent portraits; enlarged hero may appear soft"},
-    {"id":"fourth-character","status":"missing","purpose":"locked card only"},
     {"id":"official-logo","status":"missing","purpose":"use plain text branding until approved original is available"},
-    {"id":"reference-font","status":"missing","purpose":"use system font stack"}
+    {"id":"fonts","status":"existing","license":"OFL-1.1","source":"github.com/google/fonts ofl/{orbitron,rajdhani,notosanstc}","runtime":"public/assets/fonts/*.woff2","licenseFiles":"public/assets/fonts/*-OFL.txt","tool":"tools/subset-fonts.py","purpose":"Orbitron display/numbers, Rajdhani labels, Noto Sans TC Chinese (UI glyph subset); system font fallback"}
   ]
 }

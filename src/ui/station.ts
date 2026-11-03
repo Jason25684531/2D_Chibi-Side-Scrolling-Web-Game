@@ -4,13 +4,17 @@ import {InputAdapter,type Actions,type Pad} from '../input/adapter';
 import type {GameplayScene} from '../scenes/gameplay';
 import type {GameplayResult} from '../core/session';
 import {TEST_PROFILE as P,ATTACK_ITEMS,weaponMode} from '../core/config';
-import {asset,characterName,characterIds} from '../assets/catalog';
+import {asset,characterName,characterIds,characterRole,pose} from '../assets/catalog';
 import {MockStation,titles} from './mock-station';
-import {avatar,button,panel,escape,focus,text,time,stat} from './components';
+import {avatar,button,panel,escape,focus,text,time,stat,chip,icon,statRow,titleTag,rankRow} from './components';
 import './station.css';
 import {hud,updateHud} from './hud';
 const STEPS=['UC02-1 選擇角色','UC02-2 選擇攻擊道具','UC04-1 輸入暱稱'];
 const ATTRACT_IDLE=60000;
+const NAV='<span><kbd>← →</kbd>選擇</span><span><kbd>Z / ENTER</kbd>確認</span><span><kbd>BACKSPACE</kbd>返回</span><span><kbd>H</kbd>選單</span>';
+const HINTS:Record<string,string>={P0:'<span><kbd>Z / ENTER</kbd>加入示範佇列</span><span><kbd>H</kbd>系統選單</span>',P3:'<span><kbd>← →</kbd>移動</span><span><kbd>Z</kbd>跳躍</span><span><kbd>X</kbd>衝刺</span><span><kbd>C</kbd>投擲</span><span><kbd>H</kbd>選單</span>'};
+// Text wordmark only; the slashes are decoration, not the ROG eye (DESIGN.md §8.5).
+const BRAND='<div class="brand"><svg class="logo" viewBox="0 0 70 56" aria-hidden="true"><polygon points="4,8 30,8 22,48 0,48"/><polygon points="36,8 70,8 50,48 28,48" opacity=".55"/></svg><div class="wordmark">ROG<span>FUTURE GAMER</span></div>';
 /** Rarest three titles plus "+N"; no title shows 「超新星」 (planning v0.3 §3.3). */
 const titleLine=(r:GameplayResult)=>{const t=titles(r);return t.length?t.slice(0,3).join(' · ')+(t.length>3?' +'+(t.length-3):''):'超新星';};
 
@@ -165,9 +169,11 @@ export class StationUI {
     const rows=this.adapter.board(this.tier).slice(0,20);
     return `<div class="leaderboard-layout"><div class="podium">${rows.slice(0,3).map((r,i)=>`<section class="podium-card rank-${i+1}"><span class="podium-rank">0${i+1}</span>${avatar(r.characterId)}<h2 title="${escape(r.nickname)}">${escape(r.nickname)}</h2><strong>${r.score.toLocaleString()}</strong><small>POINTS / ${this.tier}s</small></section>`).join('')||'<div class="podium-empty">THE NEXT LEGEND<br><span>下一個紀錄，由你創造。</span></div>'}</div>${panel(`TOP 20 / ${this.tier} 秒`,this.ranking(true)+`<div class="pagination">${button('page-0','第 1 頁','01 — 10',this.rankPage===0)}${button('page-1','第 2 頁','11 — 20',rows.length<=10||this.rankPage===1)}</div>`,'leaderboard-table')}</div>`;
   }
-  shell(title:string,en:string,body:string,classes=''){
-    return `<div class="screen ${classes}" data-screen="${this.flow.flow}"><div class="brand">ROG / CYBER RUN</div><h1>${title}</h1><div class="eyebrow">${en}</div>${body}<div class="footer"><span>← → 選擇　Z / ENTER 確認　BACKSPACE 返回　H 選單</span><span>本機成績 · 示範排隊</span></div></div>`;
+  /** Shared v2 frame: brand + stage name + status chips on top, key hints at the bottom. */
+  shell(title:string,en:string,body:string,classes='',chips=''){
+    return `<div class="screen ${classes}" data-screen="${this.flow.flow}"><i class="floor"></i><header class="top">${BRAND}${title?`<div class="stage-name">${title}<small>${en}</small></div>`:''}</div><div class="status">${chips}</div></header>${body}<div class="hints">${HINTS[this.flow.flow]??NAV}</div><div class="hints-right">Republic of Gamers · 本機成績 · 示範排隊</div></div>`;
   }
+  get item(){return ATTACK_ITEMS.find(i=>i.src===this.adapter.current?.attackItem)??ATTACK_ITEMS[0];}
   /** UC02-1 → UC02-2 → UC04-1; every step defaults so three confirms start the run. */
   readiness(){
     const c=this.adapter.current,character=c?.characterId??'a',steps=`<ol class="steps">${STEPS.map((s,i)=>`<li data-state="${i<this.step?'done':i===this.step?'active':'todo'}">${s}</li>`).join('')}</ol>`;
@@ -193,7 +199,7 @@ export class StationUI {
       case 'P7':
         body=this.boardOpen?this.shell('榮耀排行榜','TOP 20 / LOCAL RECORDS',this.leaderboard()+`<div class="actions">${button('close-ranking','返回','BACK')}</div>`,'board-screen'):
           this.shell('再來一場？','PLAY AGAIN?',`<div class="replay-layout"><div class="replay-character">${avatar(character)}</div>${panel('YOUR NEXT RUN',`<div class="replay-title">突破你的<br><span>下一個紀錄。</span></div><p>${nickname} · ${this.tier} 秒挑戰</p><div class="actions">${button('replay','再玩一場','PLAY AGAIN',!this.adapter.replayEnabled||!!this.countdownAt)}${button('exit','結束','FINISH')}</div><div class="replay-secondary">${button('ranking','查看排行榜','TOP 20')}</div>`,'replay-panel')}</div><div class="next-player"><span>NEXT PLAYER / 下一位</span><strong>${escape(this.adapter.queue[1]?.nickname??'目前無玩家等待')}</strong></div>${this.countdownAt?'<div class="modal" role="status"><div id="countdown" class="countdown">3</div></div>':''}`,'replay-screen');break;
-      default:body=this.shell('','', '', 'transparent');
+      default:body=`<div class="screen transparent" data-screen="${this.flow.flow}"></div>`;
     }
     if(this.menu)body+=`<div class="modal screen" role="dialog" aria-modal="true" aria-label="系統選單"><div class="panel"><h2>系統選單</h2>${['P3','P4','P5','P6','P7'].includes(this.flow.flow)?button('continue','繼續','CONTINUE'):''}${this.flow.flow==='P4'?button('restart','重新開始','RESTART'):''}${button('exit','回到主畫面','HOME')}${this.flow.flow==='P0'?button('settings-replay',`再挑戰：${this.adapter.replayEnabled?'開啟':'關閉'}`,'REPLAY SETTING'):''}</div></div>`;
     this.ui.innerHTML=body;focus(this.ui.querySelector<HTMLElement>('.modal.screen')??this.ui,0,this.menu?'continue':this.flow.flow==='P1'?'ready':this.flow.flow==='P6'?'result':this.flow.flow==='P7'?'exit':undefined);

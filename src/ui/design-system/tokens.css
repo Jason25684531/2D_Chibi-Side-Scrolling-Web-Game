@@ -1,3 +1,9 @@
+/* Self-hosted OFL fonts (public/assets/fonts, LICENSE beside them). No CDN: the kiosk may be offline. */
+@font-face{font-family:'Orbitron';src:url(/assets/fonts/orbitron.woff2) format('woff2');font-weight:400 900;font-display:swap}
+@font-face{font-family:'Rajdhani';src:url(/assets/fonts/rajdhani-500.woff2) format('woff2');font-weight:500;font-display:swap}
+@font-face{font-family:'Rajdhani';src:url(/assets/fonts/rajdhani-600.woff2) format('woff2');font-weight:600;font-display:swap}
+@font-face{font-family:'Rajdhani';src:url(/assets/fonts/rajdhani-700.woff2) format('woff2');font-weight:700;font-display:swap}
+@font-face{font-family:'Noto Sans TC';src:url(/assets/fonts/noto-sans-tc.woff2) format('woff2');font-weight:100 900;font-display:swap}
 :root {
   --dark:#060b1c; --surface:#111b32; --panel:rgba(11,20,40,.94);
   --red:#ff284b; --cyan:#35b6ff; --purple:#ad54ff; --gold:#ffc75a;
@@ -5,4 +11,12 @@
   --font: "Segoe UI","Microsoft JhengHei",sans-serif;
   --safe-x:96px; --safe-y:54px; --gap:24px;
   --quick:120ms; --feedback:240ms; --panel-time:320ms;
+  /* v2 (root DESIGN.md §2) */
+  --rog-bg-0:#07080c; --rog-bg-1:#0d1016; --rog-metal:#151923; --rog-glass:rgba(10,12,18,.84);
+  --rog-red:#ff0a3c; --rog-red-deep:#8a0a24; --rog-blue:#3aa0ff; --rog-cyan:#00e5ff; --rog-gold:#ffc75a;
+  --rog-text:#f2f5fa; --rog-muted:#94a0b4; --rog-line:#2a3140; --rog-line-hi:#4b5668;
+  --rog-glow-red:0 0 0 1px #ff0a3c,0 0 18px rgba(255,10,60,.55),inset 0 0 14px rgba(255,10,60,.22);
+  --rog-glow-blue:0 0 0 1px rgba(58,160,255,.7),0 0 14px rgba(58,160,255,.3),inset 0 0 10px rgba(58,160,255,.12);
+  --rog-focus:0 0 0 4px #fff,0 0 0 8px #ff0a3c;
+  --font-display:'Orbitron','Segoe UI',sans-serif; --font-label:'Rajdhani','Segoe UI',sans-serif; --font-zh:'Noto Sans TC','Microsoft JhengHei',sans-serif;
 }

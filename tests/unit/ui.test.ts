@@ -6,6 +6,8 @@ import {GameplaySession} from '../../src/core/session';
 it('escapes untrusted identity, supplies native disabled controls and formats timer',()=>{
   expect(escape('<script>"&')).toBe('&lt;script&gt;&quot;&amp;');
   expect(button('replay','再玩','REPLAY',true)).toContain('disabled');expect(time(100)).toBe('01:40');
+  expect(escape("O'Neil")).toBe('O&#39;Neil');
+  expect(button('exit','結束','EXIT')).toContain('class="btn "');expect(button('exit','結束','EXIT',false,'primary','exit')).toMatch(/class="btn primary".*<svg class="ic"/);
 });
 it('saves an attempt once and orders planning v0.3 titles by rarity',()=>{
   const a=new MockStation();a.enqueue('Player');expect(a.current).toMatchObject({characterId:'a',attackItem:'B_ALLY.png'});
