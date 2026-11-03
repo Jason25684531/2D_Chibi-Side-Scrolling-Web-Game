@@ -5,12 +5,7 @@
 @font-face{font-family:'Rajdhani';src:url(/assets/fonts/rajdhani-700.woff2) format('woff2');font-weight:700;font-display:swap}
 @font-face{font-family:'Noto Sans TC';src:url(/assets/fonts/noto-sans-tc.woff2) format('woff2');font-weight:100 900;font-display:swap}
 :root {
-  --dark:#060b1c; --surface:#111b32; --panel:rgba(11,20,40,.94);
-  --red:#ff284b; --cyan:#35b6ff; --purple:#ad54ff; --gold:#ffc75a;
-  --text:#f5f8ff; --muted:#a7b7d1; --line:#42516b;
-  --font: "Segoe UI","Microsoft JhengHei",sans-serif;
-  --safe-x:96px; --safe-y:54px; --gap:24px;
-  --quick:120ms; --feedback:240ms; --panel-time:320ms;
+  --feedback:240ms;
   /* v2 (root DESIGN.md §2) */
   --rog-bg-0:#07080c; --rog-bg-1:#0d1016; --rog-metal:#151923; --rog-glass:rgba(10,12,18,.84);
   --rog-red:#ff0a3c; --rog-red-deep:#8a0a24; --rog-blue:#3aa0ff; --rog-cyan:#00e5ff; --rog-gold:#ffc75a;
