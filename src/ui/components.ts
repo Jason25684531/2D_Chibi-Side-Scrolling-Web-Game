@@ -20,7 +20,6 @@ export const button=(id:string,zh:string,en:string,disabled=false,variant='',ic=
 export const chip=(html:string,dot='')=>`<span class="chip">${dot?`<i class="${dot}"></i>`:''}${html}</span>`;
 export const titleTag=(text:string)=>`<span class="title-badge">${escape(text)}<small>TITLE</small></span>`;
 export const rankRow=(rank:number,r:Ranking,you:boolean)=>`<div class="rank-row ${you?'you':''}" ${you?'aria-current="true"':''}><b>${String(rank).padStart(2,'0')}</b><img src="${pose(r.characterId)}" alt=""><span title="${escape(r.nickname)}">${escape(r.nickname)}</span><em>${r.score.toLocaleString()}</em></div>`;
-export const stat=(label:string,value:unknown)=>`<div class="stat"><span>${escape(label)}</span><strong>${escape(value)}</strong></div>`;
 export const panel=(title:string,body:string,style='')=>`<section class="panel ${style}"><h2>${title}</h2>${body}</section>`;
 export const badgeIcon=()=>`<img class="badge-icon" src="${asset('items/'+level.itemArt.badge.art)}" alt="ROG Badge">`;
 export const time=(seconds:number)=>`${Math.floor(Math.max(0,seconds)/60).toString().padStart(2,'0')}:${Math.floor(Math.max(0,seconds)%60).toString().padStart(2,'0')}`;
