@@ -70,3 +70,12 @@ test('Scene pause freezes an active camera move and resume completes it',async({
   const resumed=await page.evaluate(()=>{const s=(window as any).__gameplay;return{elapsed:s.run.elapsed,phase:s.run.phase};});
   expect(resumed.phase).toBe('running');expect(resumed.elapsed).toBeGreaterThan(paused.elapsed);
 });
+
+test('fall-zone nets and laser-trap art carry live arcs; a shock adds arcs on the player',async({page})=>{
+  await page.goto('/?debug=1');await page.waitForFunction(()=>(window as any).__gameplay?.body?.blocked.down);
+  const layers=()=>page.evaluate(()=>(window as any).__gameplay.children.list.filter((o:any)=>o.type==='Graphics'&&(o.depth===-9||o.depth===7)).map((o:any)=>o.commandBuffer.length));
+  await page.evaluate(()=>{const s=(window as any).__gameplay,h=s.terrain.hazards[0];s.body.reset(h.x,h.y-140);s.body.setAllowGravity(false);s.cameraManager.reset(h.x,h.y-100);});
+  await page.waitForTimeout(300);const near=await layers();expect(near).toHaveLength(3);expect(near[1]).toBeGreaterThan(0);
+  const shock=await page.evaluate(()=>{const s=(window as any).__gameplay;s.shockUntil=s.run.elapsed+.6;return 1;});expect(shock).toBe(1);
+  await page.waitForTimeout(100);expect((await layers())[2]).toBeGreaterThan(0);
+});

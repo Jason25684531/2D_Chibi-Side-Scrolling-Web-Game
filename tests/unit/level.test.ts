@@ -49,5 +49,5 @@ it('derives the runtime profile from level physics (v = sqrt(2gh))',()=>{
   const p=deriveProfile({run:8,jump:3.5,djump:2.5,gravity:2400,dashMult:1.8,dashTime:.3,springH:12});
   expect(p.speed).toBe(256);expect(p.gravity).toBe(1200);expect(p.bounceSpeed).toBe(960);expect(p.dashDuration).toBe(.3);
   expect(p.jumpSpeed).toBeCloseTo(518.46,1);expect(p.doubleJumpSpeed).toBeCloseTo(438.18,1);expect(p.dashSpeed).toBeCloseTo(460.8,1);
-  expect(p.terminalSpeed).toBe(800);expect([P.bodyWidth,P.bodyHeight,P.timeTier]).toEqual([24,64,100]);
+  expect(p.terminalSpeed).toBe(800);expect([P.bodyWidth,P.bodyHeight,P.timeTier]).toEqual([24,64,120]);
 });

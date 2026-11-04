@@ -1,4 +1,4 @@
-export const FLOW = ['P0','P1','P2','P3','P4','P5','P6','P7'] as const;
+const FLOW = ['P0','P1','P2','P3','P4','P5','P6','P7'] as const;
 export type Flow = typeof FLOW[number];
 export class GameplayStateMachine {
   flow: Flow = 'P0';
@@ -9,7 +9,7 @@ export class GameplayStateMachine {
   }
   enterGameplay() { while (this.flow !== 'P4') this.transition(FLOW[FLOW.indexOf(this.flow) + 1]); }
 }
-export type Phase = 'new-run'|'running'|'paused'|'respawning'|'goal-reached'|'time-up'|'finished';
+type Phase = 'new-run'|'running'|'paused'|'respawning'|'goal-reached'|'time-up'|'finished';
 export class RunStateManager {
   readonly runId = crypto.randomUUID();
   readonly attemptId = crypto.randomUUID();

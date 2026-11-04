@@ -30,7 +30,7 @@ test('D4/D5: physical pickup, stomp, scatter/recovery, respawn credit, coexistin
   const result=await page.evaluate(()=>(window as any).__gameplay.session.result);expect(result.scoreBreakdown.goal).toBe(50);expect(result.scoreBreakdown.noDrop).toBe(0);
   await page.waitForTimeout(150);expect(await page.evaluate(()=>(window as any).__gameplay.run.remaining)).toBe(result.remainingTime);
   await page.click('#replay');await page.waitForFunction(id=>(window as any).__gameplay.run.runId!==id,result.runId);
-  expect(await page.evaluate(()=>(window as any).__gameplay.run.timeTier)).toBe('100');expect(await page.evaluate(()=>(window as any).__gameplay.session.score.total)).toBe(0);
+  expect(await page.evaluate(()=>(window as any).__gameplay.run.timeTier)).toBe('120');expect(await page.evaluate(()=>(window as any).__gameplay.session.score.total)).toBe(0);
   expect(errors).toEqual([]);
 });
 test('D5: time-up locks result and rejects late score/pickup/goal',async({page})=>{

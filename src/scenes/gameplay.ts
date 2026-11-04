@@ -35,7 +35,7 @@ export class GameplayScene extends Phaser.Scene {
   private frameTime=0;
   level=LEVEL;
   constructor() { super('Gameplay'); }
-  create(data:{duration?:number;sessionId?:string;characterId?:string;attackItem?:string;tutorial?:boolean;flow?:GameplayStateMachine}={}) {
+  create(data:{duration?:number;sessionId?:string;characterId?:string;attackItem?:string;photo?:string;tutorial?:boolean;flow?:GameplayStateMachine}={}) {
     const debug=new URLSearchParams(location.search).get('debug')==='1';
     this.frameTime=performance.now();this.shockUntil=0;
     this.level=data.tutorial?TUTORIAL_LEVEL:LEVEL;
@@ -52,13 +52,13 @@ export class GameplayScene extends Phaser.Scene {
     this.physics.add.existing(this.player); this.body=this.player.body as Phaser.Physics.Arcade.Body;
     this.body.setCollideWorldBounds(true);
     this.controller=new PlayerController(this.body);
-    this.presentation=new CharacterView(this,this.player,data.characterId??(document.querySelector('#character') as HTMLSelectElement)?.value??'a',debug);
+    this.presentation=new CharacterView(this,this.player,data.characterId??(document.querySelector('#character') as HTMLSelectElement)?.value??'a',debug,data.photo);
     this.clearInput();
     this.terrain=new TerrainSystem(this,this.level,this.player,()=>this.run.elapsed,()=>{this.controller.bounce();this.session.stats.bounces++;},()=>this.run.elapsed<this.controller.dropUntil,debug);
     this.cameraManager=new CameraManager(this.cameras.main,this.level);this.cameraManager.reset(this.player.x,this.body.bottom);
     if(data.tutorial)this.cameras.main.setViewport(290,140,620,240);
     this.respawner=new RespawnManager(this.terrain,this.level);
-    this.badges=new BadgeWorld(this,this.session,this.player,this.level.badges);
+    this.badges=new BadgeWorld(this,this.session,this.player,this.terrain,this.level.badges);
     this.enemies=new EnemySystem(this,this.session,this.player,this.level,cause=>this.takeDamage(cause),()=>this.controller.bounce(P.jumpSpeed*P.stompBounce));
     this.pickups=this.level.powerups.map(p=>{
       const art=p.kind==='ally'?level.itemArt.ally:null,w=p.kind==='laptop'?2*T:T;

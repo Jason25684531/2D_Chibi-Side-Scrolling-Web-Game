@@ -1,7 +1,7 @@
 import type Phaser from 'phaser';
 import type {Actions} from '../input/adapter';
 import {TEST_PROFILE as P} from '../core/config';
-export type PlayerState='IDLE'|'RUN'|'JUMP'|'DOUBLE_JUMP'|'DASH'|'HURT'|'FALL'|'WIN';
+type PlayerState='IDLE'|'RUN'|'JUMP'|'DOUBLE_JUMP'|'DASH'|'HURT'|'FALL'|'WIN';
 // Planning v0.3 §3.1 controller: coyote time, jump cut x0.45, separate double-jump speed, terminal fall speed, ↓ drop-through.
 export class PlayerController {
   state:PlayerState='IDLE'; facing=1; jumps=0; dashUntil=0; dashReady=0; hurtUntil=0; coyoteUntil=0; dropUntil=0; private cut=true;

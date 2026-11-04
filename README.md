@@ -11,7 +11,7 @@
 | 指令 | 用途 |
 |---|---|
 | `npm install` | 安裝依賴 |
-| `npm run dev` | 啟動開發伺服器（`127.0.0.1`） |
+| `npm run dev` | 啟動開發伺服器（`127.0.0.1`；CUSTOM 拍照需要 secure context，正式機台請用 localhost 或 HTTPS） |
 | `npm run build` | 型別檢查 + 打包（`index.html`、`prototype.html` 兩個入口） |
 | `npm run typecheck` | 只跑 TypeScript 型別檢查 |
 | `npm test` | Vitest 單元 + 整合測試 |
@@ -136,8 +136,10 @@ flowchart TB
 
 | 檔案 | 說明 |
 |---|---|
-| `station.ts` | `StationUI`：Kiosk 主流程控制器，渲染每個階段畫面、處理鍵盤／搖桿焦點 |
-| `mock-station.ts` | `MockStation`：模擬後端，身分佇列與排行榜存在 `localStorage`（`rog-future-gamer.records.v1`） |
+| `station.ts` | `StationUI`：Kiosk 主流程控制器，渲染每個階段畫面、處理鍵盤／搖桿焦點與攝影機開關 |
+| `readiness.ts` | P1 畫面組裝（純函式）：角色／拍照／道具／暱稱步驟、上一步／下一步主鍵 |
+| `camera.ts` | CUSTOM 頭像：開關攝影機、拍出圓形鏡像照片、把頭像合成到兩種身體的立繪 |
+| `mock-station.ts` | `MockStation`：模擬後端，身分佇列與排行榜存在 `localStorage`（`rog-future-gamer.records.v1`）；照片只留在記憶體的玩家牆，不寫入紀錄 |
 | `hud.ts` | 遊戲中 HUD（時間、徽章、分數） |
 | `components.ts` | HTML 小元件（按鈕、面板、頭像），內含 `escape` 防 XSS |
 | `design-system/` | 設計 Token（`tokens.css`）與設計說明 |
@@ -149,18 +151,18 @@ flowchart TB
 
 ```mermaid
 flowchart LR
-    P0[P0 待機牆] --> P1[P1 選角色] --> P2[P2 選時間] --> P3[P3 新手訓練]
+    P0[P0 待機牆] --> P1[P1 選角色] --> P2[P2 直通] --> P3[P3 新手訓練]
     P3 --> P4[P4 遊戲中] --> P5[P5 GOAL / TIME UP] --> P6[P6 結算] --> P7[P7 排行榜]
-    P2 -. 返回 .-> P1
+    P1 -. 上一步 .-> P0
     P7 -. 再玩一次 .-> P4
 ```
 
 | 階段 | 畫面 | 說明 |
 |---|---|---|
-| P0 | 待機牆 | 輪播玩家紀錄；有玩家排入後自動進 P1 |
-| P1 | 選擇角色 | aria / kael / riven，輸入暱稱（最多 24 字） |
-| P2 | 選擇時間 | 60 秒（挑戰）／90 秒（標準）／120 秒（休閒） |
-| P3 | 新手訓練場 | 素材載入中可先在訓練關練習（不計分） |
+| P0 | 待機牆 | 玩家牆 + TOP 20；按 PLAY（Z／Enter）排入後進 P1 |
+| P1 | 準備 | 角色 S3WW／S2AM／CUSTOM（拍照、可重拍，再選身體）→ 攻擊道具 → 暱稱（最多 8 字）；主鍵分上一步／下一步，第一步的上一步回 P0 |
+| P2 | 直通 | 不顯示畫面，固定 100 秒 |
+| P3 | 新手訓練場 | 在訓練切片自由練習（不計分、不限時），按「開始遊戲」（Enter）後倒數 3 秒進 P4 |
 | P4 | 遊戲中 | 正式關卡 + HUD |
 | P5 | 結束畫面 | GOAL! 停留 5 秒，TIME UP 停留 3 秒 |
 | P6 | 結算 | 分數明細與稱號 |
@@ -193,7 +195,7 @@ flowchart LR
 | `tests/unit/` | 規則、控制器、關卡、排行榜、UI 的單元測試 |
 | `tests/integration/` | `run-loop.test.ts`：完整一局流程 |
 | `tests/browser/` | Playwright：移動、地形、斜坡、徽章、Station、UIUX 等 |
-| `tools/` | 素材整理腳本（`stage-assets.mjs`、`inspect-character-assets.py`） |
+| `tools/` | 素材整理腳本（`stage-assets.py`、`subset-fonts.py`、`inspect-character-assets.py`） |
 | `docs/` | 需求審查、素材盤點、測試設定、UIUX 報告、交付紀錄 |
 | `openspec/specs/` | 12 項能力規格（runtime、player-input、physics-terrain、enemy、station-ui…） |
 

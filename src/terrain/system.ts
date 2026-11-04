@@ -63,6 +63,20 @@ export class TerrainSystem {
   hazardAt(left:number,top:number,right:number,bottom:number){
     return this.hazards.some(h=>right-4>h.x-h.width/2&&left+4<h.x+h.width/2&&bottom-1>h.y-h.height/2&&top+4<h.y+h.height/2);
   }
+  /** Highest static top surface under a box centred at x (half-width `half`) at or below fromY; movers skipped (badge scatter). */
+  groundY(x:number,fromY:number,half=0){
+    let best:number|undefined;
+    for(const {data} of this.entries){
+      if(data.kind==='moving'||x+half<=data.x-data.width/2||x-half>=data.x+data.width/2)continue;
+      const top=data.kind==='slope'?this.slopeFootY(data,x,half*2):data.y-data.height/2;
+      if(top>=fromY&&(best===undefined||top<best))best=top;
+    }
+    return best;
+  }
+  /** Centre-box overlaps a static solid block (ground or spring). Slopes, one-way and movers only support from above. */
+  solidAt(x:number,y:number,w:number,h:number){
+    return this.entries.some(({data})=>(data.kind==='ground'||data.kind==='bounce')&&x+w/2>data.x-data.width/2&&x-w/2<data.x+data.width/2&&y+h/2>data.y-data.height/2&&y-h/2<data.y+data.height/2);
+  }
   supports(x:number,bottom:number,width:number) {
     return this.entries.some(({data,object})=>(data.kind==='ground'||data.kind==='slope')&&x-width/2>object.x-data.width/2+4&&x+width/2<object.x+data.width/2-4&&Math.abs(bottom-(data.kind==='slope'?this.slopeFootY(data,x,width):object.y-data.height/2))<4);
   }

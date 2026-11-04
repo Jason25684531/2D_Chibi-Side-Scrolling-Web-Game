@@ -12,7 +12,7 @@ function smoothDamp(cur:number,target:number,s:Velocity,key:keyof Velocity,st:nu
   return out;
 }
 const clamp=(v:number,lo:number,hi:number)=>Math.max(lo,Math.min(hi,v));
-export type Follow={x:number;bottom:number;top:number;vx:number;vy:number;grounded:boolean};
+type Follow={x:number;bottom:number;top:number;vx:number;vy:number;grounded:boolean};
 export class CameraManager {
   private v:Velocity={x:0,y:0,f:0,l:0};private face=1;private leadDir=1;private leadT=0;private look=0;private camFeet=0;private groundFeet=0;zoom=0;
   constructor(readonly camera:Phaser.Cameras.Scene2D.Camera,readonly level:LevelData){camera.setBounds(0,0,level.width,level.height);}

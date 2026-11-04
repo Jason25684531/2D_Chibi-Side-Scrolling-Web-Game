@@ -23,5 +23,5 @@ test('Home key opens the UX p14 menu: pauses, Continue resumes, Restart starts a
   await page.keyboard.press('KeyH');await page.waitForFunction(()=>(window as any).__gameplay.menu===0);
   await page.keyboard.down('ArrowRight');await page.waitForTimeout(100);await page.keyboard.up('ArrowRight');await page.waitForFunction(()=>(window as any).__gameplay.menu===1);
   await page.keyboard.press('Space');await page.waitForFunction(old=>(window as any).__gameplay.run.runId!==old,old);
-  expect(await page.evaluate(()=>(window as any).__gameplay.run.timeTier)).toBe('100');
+  expect(await page.evaluate(()=>(window as any).__gameplay.run.timeTier)).toBe('120');
 });

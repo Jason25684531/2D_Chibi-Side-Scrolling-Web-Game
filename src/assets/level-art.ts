@@ -1,6 +1,7 @@
 import level from '../level/data/level.json';
 import {TILE as T} from '../core/config';
 import type {GameplayScene} from '../scenes/gameplay';
+import {electricFx} from './electric';
 const S=T/level.tile;
 /** Presentation only: background, painted tiles and object art from the level JSON. Never touches bodies or score. */
 export function levelArt(scene:GameplayScene,clip?:{cols:number;rows:number}){
@@ -31,4 +32,5 @@ export function levelArt(scene:GameplayScene,clip?:{cols:number;rows:number}){
   scene.events.on('postupdate',update);
   scene.events.once('shutdown',()=>scene.events.off('postupdate',update));
   update();
+  electricFx(scene,clip);
 }

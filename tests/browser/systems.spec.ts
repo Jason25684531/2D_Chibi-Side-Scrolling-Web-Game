@@ -31,3 +31,13 @@ test('beholder patrol/chase/laser, charger dash, reset, Ally attraction and safe
   await page.keyboard.down('ArrowRight');await page.evaluate(()=>window.dispatchEvent(new Event('blur')));
   expect(await page.evaluate(()=>(window as any).__gameplay.inputAdapter.sample().move)).toBe(0);await page.keyboard.up('ArrowRight');
 });
+
+test('thrown items stop inside the solid half of a slope cell, not only on full blocks',async({page})=>{
+  await page.goto('/?debug=1');await page.waitForFunction(()=>!!(window as any).__gameplay?.enemies);
+  const r=await page.evaluate(()=>{
+    const E=(window as any).__gameplay.enemies,g:string[]=E.level.grid,T=32,find=(ch:string)=>{for(let row=0;row<g.length;row++){const c=g[row].indexOf(ch);if(c>=0)return[c*T,row*T];}return null;};
+    const up=find('/'),down=find('\\');
+    return{up:up&&[E.inSolid(up[0]+T*.8,up[1]+T*.8),E.inSolid(up[0]+T*.2,up[1]+T*.2)],down:down&&[E.inSolid(down[0]+T*.2,down[1]+T*.8),E.inSolid(down[0]+T*.8,down[1]+T*.2)]};
+  });
+  expect(r.up).toEqual([true,false]);expect(r.down).toEqual([true,false]);
+});

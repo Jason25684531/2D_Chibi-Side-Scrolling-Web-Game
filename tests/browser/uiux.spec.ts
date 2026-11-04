@@ -4,8 +4,7 @@ test.use({viewport:{width:1920,height:1080}});
 test('tutorial lessons come from the practice slice, follow runtime actions and reset before the real run',async({page})=>{
   await page.goto('/');await page.locator('[data-action=demo]').click();for(let i=0;i<3;i++)await page.locator('[data-action=ready]').click();
   await page.waitForFunction(()=>(window as any).__gameplay?.session?.tutorial);
-  // Keep the sandbox open while testing each collision. Never set checklist flags.
-  await page.evaluate(()=>{(window as any).__station.entered=performance.now()+30000;});
+  // The sandbox has no time limit; never set checklist flags.
   await page.waitForFunction(()=>(window as any).__gameplay.body.blocked.down);
   await expect(page.locator('[data-lesson]')).toHaveCount(8); // slice cols 0-40 rows 0-23 has no spring
   await page.keyboard.down('ArrowRight');await page.waitForTimeout(120);await page.keyboard.up('ArrowRight');
@@ -20,8 +19,8 @@ test('tutorial lessons come from the practice slice, follow runtime actions and 
   await expect(page.locator('[data-lesson=踩擊]')).toHaveAttribute('data-state','completed');
   await expect(page.locator('[data-state=completed]')).toHaveCount(8);
   await page.screenshot({path:'docs/evidence/rog-uiux/tutorial-completed.png'});
-  await page.evaluate(()=>{const u=(window as any).__station;u.entered=performance.now()-8001;u.countdownAt=performance.now()-3001;});
-  await expect(page.locator('[data-screen=P4]')).toBeVisible();
+  await page.locator('[data-action=start-game]').click();
+  await expect(page.locator('[data-screen=P4]')).toBeVisible({timeout:5000});
   await page.waitForFunction(()=>(window as any).__gameplay.run.phase==='running'&&!(window as any).__gameplay.session.tutorial); // restart lands one frame after P4 renders
   expect(await page.evaluate(()=>{const s=(window as any).__gameplay.session;return{tutorial:s.tutorial,score:s.score.total,badges:s.badges.held,armed:s.power.armed,ally:s.power.ally,bounces:s.stats.bounces};})).toEqual({tutorial:false,score:0,badges:0,armed:false,ally:false,bounces:0});
 });
@@ -47,7 +46,7 @@ test('character B, attack item, nickname input, real tutorial actions and fixed 
   await page.keyboard.down('ArrowRight');await page.waitForTimeout(300);await page.keyboard.up('ArrowRight');
   await expect(page.locator('[data-lesson=移動]')).toHaveAttribute('data-state','completed');
   await page.screenshot({path:'docs/evidence/rog-uiux/tutorial.png'});
-  await expect(page.locator('[data-screen=P4]')).toBeVisible({timeout:15000});
+  await page.keyboard.press('Enter');await expect(page.locator('[data-screen=P4]')).toBeVisible({timeout:5000});
   const before=await page.locator('.hud').boundingBox();
   await page.evaluate(()=>{
     const s=(window as any).__gameplay;

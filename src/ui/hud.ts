@@ -32,7 +32,7 @@ function feedback(root:HTMLElement,id:string,value:number){
 
 // Presentation reads the same session as gameplay. No UI timers or score rules.
 export function updateHud(root:HTMLElement,s:GameplaySession,total:number,segment=''){
-  text(root,'hud-badges',s.badges.held);text(root,'hud-total',total);text(root,'hud-segment',segment);
+  feedback(root,'hud-badges',s.badges.held);text(root,'hud-total',total);text(root,'hud-segment',segment);
   text(root,'hud-time',time(s.run.remaining));feedback(root,'hud-score',s.score.total);
   const low=s.run.remaining<=15;
   root.querySelector('.timer')?.classList.toggle('low-time',low);

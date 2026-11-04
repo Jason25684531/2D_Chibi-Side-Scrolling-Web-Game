@@ -6,7 +6,7 @@ import beholder from '../level/data/beholder.json';
 import charger from '../level/data/charger.json';
 
 type Rect={x:number;y:number;w:number;h:number}; // top-left, px
-export type Enemy=Rect&{id:string;kind:EnemyKind;spawn:EnemySpawn;home:Rect;dir:number;defeated:boolean;state:'patrol'|'chase'|'charge'|'fire'|'idle'|'rest';t:number;lost:number;cd:number;aim:number;anim:number;beam:{ax:number;ay:number;bx:number;by:number}|null;sprite:Phaser.GameObjects.Image};
+type Enemy=Rect&{id:string;kind:EnemyKind;spawn:EnemySpawn;home:Rect;dir:number;defeated:boolean;state:'patrol'|'chase'|'charge'|'fire'|'idle'|'rest';t:number;lost:number;cd:number;aim:number;anim:number;beam:{ax:number;ay:number;bx:number;by:number}|null;sprite:Phaser.GameObjects.Image};
 type Bolt={x:number;y:number;vx:number;vy:number;t:number;m:Mode;hit:Set<Enemy>;hitE?:Enemy;image:Phaser.GameObjects.Image};
 const overlap=(a:Rect,b:Rect)=>a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;
 const key=(file:string)=>'monsters/'+file;
@@ -30,6 +30,8 @@ export class EnemySystem {
   tile(c:number,r:number){const g=this.level.grid;if(c<0||c>=g[0].length)return '#';if(r<0||r>=g.length)return '.';return g[r][c];}
   solid(c:number,r:number){const t=this.tile(c,r);return t==='#'||t==='/'||t==='\\';}
   floor(c:number,r:number){const t=this.tile(c,r);return t==='#'||t==='=';}
+  /** Point inside solid material: a full block, or under the diagonal of a slope cell. */
+  inSolid(x:number,y:number){const c=Math.floor(x/T),r=Math.floor(y/T),t=this.tile(c,r),lx=x-c*T,ly=y-r*T;return t==='#'||(t==='/'&&ly>T-lx)||(t==='\\'&&ly>lx);}
   /** Ray from (ax,ay) toward ang, stopping before a solid cell. */
   ray(ax:number,ay:number,ang:number,len:number){const st=T/8,dx=Math.cos(ang)*st,dy=Math.sin(ang)*st;let x=ax,y=ay;
     for(let d=0;d<len;d+=st){if(this.solid(Math.floor((x+dx)/T),Math.floor((y+dy)/T)))break;x+=dx;y+=dy;}return{x,y};}
@@ -97,7 +99,7 @@ export class EnemySystem {
     for(const bolt of this.bolts){
       const m=bolt.m,hw=m.hitbox[0]*T/2,hh=m.hitbox[1]*T/2;
       bolt.vy+=m.gravity*T*dt;bolt.x+=bolt.vx*dt;bolt.y+=bolt.vy*dt;bolt.t-=dt;
-      if(this.tile(Math.floor(bolt.x/T),Math.floor(bolt.y/T))==='#')bolt.t=0;
+      if(this.inSolid(bolt.x,bolt.y))bolt.t=0; // editor checked '#' only, so items flew through slopes
       else if(m.burst&&bolt.vy>0){const gr=Math.floor((bolt.y+hh)/T),gt=this.tile(Math.floor(bolt.x/T),gr);if(gt==='#'||gt==='/'||gt==='\\'||gt==='='){bolt.y=gr*T-hh;bolt.t=0;}} // A lands
       for(const e of this.enemies)if(!e.defeated&&bolt.t>0&&!bolt.hit.has(e)&&overlap({x:bolt.x-hw,y:bolt.y-hh,w:hw*2,h:hh*2},e)){
         bolt.hit.add(e);bolt.hitE=e;this.defeat(e,'bolt');if(bolt.hit.size>=(m.pierce??1))bolt.t=0;
