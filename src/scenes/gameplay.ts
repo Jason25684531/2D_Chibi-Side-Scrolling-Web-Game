@@ -15,6 +15,7 @@ import {RespawnManager} from '../respawn/manager';
 import {EnemySystem} from '../enemy/system';
 import {levelArt} from '../assets/level-art';
 import level from '../level/data/level.json';
+import {sfx,hold,stopHeld,listen} from '../audio/sfx';
 export class GameplayScene extends Phaser.Scene {
   run!: RunStateManager;
   flow!: GameplayStateMachine;
@@ -40,7 +41,7 @@ export class GameplayScene extends Phaser.Scene {
     this.frameTime=performance.now();this.shockUntil=0;
     this.level=data.tutorial?TUTORIAL_LEVEL:LEVEL;
     this.attackItem=ATTACK_ITEMS.find(i=>i.src===data.attackItem)?.src??ATTACK_ITEMS[0].src;
-    this.session=new GameplaySession(data.duration??P.timeTier,data.sessionId??(sessionStorage.sessionId ??= crypto.randomUUID()),data.tutorial);this.run=this.session.run;
+    this.session=new GameplaySession(data.duration??P.timeTier,data.sessionId??(sessionStorage.sessionId ??= crypto.randomUUID()),data.tutorial);this.run=this.session.run;listen(this.session.events);
     this.flow=data.flow??new GameplayStateMachine();if(!data.flow)this.flow.enterGameplay();
     this.fixed=new FixedStepController(debug&&Number(new URLSearchParams(location.search).get('hz')) === 60 ? 60 : 24);
     this.physics.world.fixedStep=false;
@@ -54,7 +55,7 @@ export class GameplayScene extends Phaser.Scene {
     this.controller=new PlayerController(this.body);
     this.presentation=new CharacterView(this,this.player,data.characterId??(document.querySelector('#character') as HTMLSelectElement)?.value??'a',debug,data.photo);
     this.clearInput();
-    this.terrain=new TerrainSystem(this,this.level,this.player,()=>this.run.elapsed,()=>{this.controller.bounce();this.session.stats.bounces++;},()=>this.run.elapsed<this.controller.dropUntil,debug);
+    this.terrain=new TerrainSystem(this,this.level,this.player,()=>this.run.elapsed,()=>{this.controller.bounce();this.session.stats.bounces++;sfx('ENV-01');},()=>this.run.elapsed<this.controller.dropUntil,debug);
     this.cameraManager=new CameraManager(this.cameras.main,this.level);this.cameraManager.reset(this.player.x,this.body.bottom);
     if(data.tutorial)this.cameras.main.setViewport(290,140,620,240);
     this.respawner=new RespawnManager(this.terrain,this.level);
@@ -74,7 +75,7 @@ export class GameplayScene extends Phaser.Scene {
     this.hud.setVisible(!this.registry.get('station'));
     this.menu=-1;this.lastMove=0;this.menuMask=this.add.rectangle(P.width/2,P.height/2,P.width,P.height,0x000000,.8).setScrollFactor(0).setDepth(200).setVisible(false);
     this.menuView=this.add.text(P.width/2,P.height/2,'',{fontSize:'28px',color:'#ffffff',align:'center'}).setOrigin(.5).setScrollFactor(0).setDepth(201);
-    this.events.once('shutdown',()=>{ this.inputAdapter.dispose(); this.session.dispose(); });
+    this.events.once('shutdown',()=>{ this.inputAdapter.dispose(); this.session.dispose(); stopHeld(); });
     (window as any).__gameplay=this;
   }
   clearInput() { this.inputAdapter.clear(); this.pending={jump:false,dash:false,throw:false,down:false}; }
@@ -120,6 +121,9 @@ export class GameplayScene extends Phaser.Scene {
   }
   update(_time: number,delta: number) {
     const now=performance.now();delta=now-this.frameTime;this.frameTime=now;
+    // Before the station/menu early returns: pause, Result and menus must silence these. SYS-01 is 9.0 s, so it ends at 0.
+    const live=this.run.phase==='running',timed=live&&!this.session.tutorial;
+    hold('ENV-04',+timed);hold('PWR-07',+(live&&this.session.power.ally));hold('ENV-02',live?this.goalNear():0);hold('SYS-01',+(timed&&this.run.remaining>0&&this.run.remaining<=9));
     const pad=this.testPad ?? Array.from(navigator.getGamepads?.() ?? []).find(p=>p?.connected);
     const a=this.inputAdapter.sample(pad);
     const station=this.registry.get('station');
@@ -140,7 +144,7 @@ export class GameplayScene extends Phaser.Scene {
         return;
       }
       this.controller.update({...a,...this.pending},this.run.elapsed,dt,this.session.power.ally?P.allySpeed:1);
-      if(this.pending.throw&&this.session.power.throw(this.run.elapsed,weaponMode(this.attackItem).cooldown)){this.enemies.throwItem(this.attackItem,this.player.x,this.body.bottom,this.controller.facing);this.presentation.attack(this.run.elapsed);}
+      if(this.pending.throw&&this.session.power.throw(this.run.elapsed,weaponMode(this.attackItem).cooldown)){this.enemies.throwItem(this.attackItem,this.player.x,this.body.bottom,this.controller.facing);this.presentation.attack(this.run.elapsed);sfx('PWR-04');}
       this.pending={jump:false,dash:false,throw:false,down:false};
       this.enemies.update(dt);
       stepPhysics(this.physics.world,this.run.elapsed,dt,()=>this.terrain.resolveSlopes());
@@ -148,8 +152,8 @@ export class GameplayScene extends Phaser.Scene {
       const bounds=new Phaser.Geom.Rectangle(this.body.x,this.body.y,this.body.width,this.body.height);
       for(const p of this.pickups)if(p.object.active&&Phaser.Geom.Intersects.RectangleToRectangle(bounds,p.object.getBounds())){this.session.activate(p.kind,p.id);p.object.destroy();p.image.destroy();}
       this.respawner.track(this.player.x,this.player.y,this.body.width,this.body.height,this.body.blocked.down&&this.run.elapsed>=this.controller.dashUntil,this.enemies.dangerAt(this.player.x));
-      if(this.player.y>this.level.pitY)this.respawn('pit');
-      else if(this.terrain.hazardAt(this.body.left,this.body.top,this.body.right,this.body.bottom)){this.shockUntil=this.run.elapsed+P.shockTime;this.body.setVelocity(0);this.body.allowGravity=false;this.controller.state='HURT';}
+      if(this.player.y>this.level.pitY){sfx('MOV-06');this.respawn('pit');}
+      else if(this.terrain.hazardAt(this.body.left,this.body.top,this.body.right,this.body.bottom)){this.shockUntil=this.run.elapsed+P.shockTime;this.body.setVelocity(0);this.body.allowGravity=false;this.controller.state='HURT';sfx('MOV-06');}
       if(Phaser.Geom.Intersects.RectangleToRectangle(bounds,this.goal.getBounds())){this.session.finish('goal');this.finalize();}
       if(!this.session.result&&this.run.remaining===0){this.session.finish('time-up');this.finalize();}
       if(this.session.result)return;

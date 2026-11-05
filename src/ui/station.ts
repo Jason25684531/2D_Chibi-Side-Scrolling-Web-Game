@@ -11,6 +11,9 @@ import {readiness,readinessSteps,readyLabel,needsPhoto,look} from './readiness';
 import {openCamera,closeCamera,cameraError,capturePhoto,dress} from './camera';
 import './station.css';
 import {hud,updateHud} from './hud';
+import {sfx} from '../audio/sfx';
+/** Buttons that go back a step play UI-03 (sheet: 返回上一頁／取消／重拍); every other button plays UI-02. */
+const BACK=new Set(['prev','exit','close-ranking','records-back','retake']);
 const ATTRACT_IDLE=60000;
 const NAV='<span><kbd>← →</kbd>選擇</span><span><kbd>Z / ENTER</kbd>確認</span><span><kbd>BACKSPACE</kbd>返回</span><span><kbd>H</kbd>選單</span>';
 const HINTS:Record<string,string>={P0:'<span><kbd>Z / ENTER</kbd>PLAY</span><span><kbd>H</kbd>系統選單</span>',P3:'<span><kbd>← →</kbd>移動</span><span><kbd>Z</kbd>跳躍</span><span><kbd>X</kbd>衝刺</span><span><kbd>C</kbd>投擲</span><span><kbd>ENTER</kbd>開始遊戲</span><span><kbd>H</kbd>選單</span>'};
@@ -35,7 +38,7 @@ export class StationUI {
     this.ui=document.createElement('div');this.ui.id='station-ui';
     document.body.append(this.root);this.root.append(document.querySelector('#game')!,this.ui);
     game.registry.set('station',this);this.inputAdapter.attach();
-    this.ui.addEventListener('click',event=>{const b=(event.target as HTMLElement).closest<HTMLButtonElement>('button');if(b&&!b.disabled)this.act(b.dataset.action!);});
+    this.ui.addEventListener('click',event=>{const b=(event.target as HTMLElement).closest<HTMLButtonElement>('button');if(b&&!b.disabled){sfx(BACK.has(b.dataset.action!)?'UI-03':'UI-02');this.act(b.dataset.action!);}});
     this.ui.addEventListener('pointerdown',()=>this.wake());
     this.ui.addEventListener('input',event=>{const input=event.target as HTMLInputElement;if(input.id==='nickname'&&this.adapter.current)this.adapter.current.nickname=input.value;});
     this.ui.addEventListener('focusin',event=>{
@@ -55,7 +58,7 @@ export class StationUI {
     this.render();(window as any).__station=this;
   }
   get scene(){return this.game.scene.getScene('Gameplay') as GameplayScene;}
-  go(next:Flow){this.admin=false;this.armed='';this.flow.transition(next);this.entered=this.idleSince=performance.now();this.countdownAt=0;this.boardOpen=false;this.rankPage=0;this.attract=false;if(next==='P1')this.step=0;this.render();}
+  go(next:Flow){if(next==='P4')sfx('ANN-02');this.admin=false;this.armed='';this.flow.transition(next);this.entered=this.idleSince=performance.now();this.countdownAt=0;this.boardOpen=false;this.rankPage=0;this.attract=false;if(next==='P1')this.step=0;this.render();}
   start(tutorial=false){
     this.inputAdapter.dispose();this.progress.clear();
     const c=this.adapter.current!,data={duration:this.tier,sessionId:c.sessionId,characterId:c.characterId,attackItem:c.attackItem,photo:c.custom?c.photo:undefined,tutorial,flow:this.flow};
@@ -94,7 +97,7 @@ export class StationUI {
     }
     // P3 has no time limit (PO 2026-11-04): the player starts the 3-2-1 once the slice is running.
     if(action==='start-game'&&this.flow.flow==='P3'&&!this.countdownAt&&this.game.registry.get('assetsReady')&&this.game.scene.isActive('Gameplay')){
-      this.countdownAt=performance.now();(document.activeElement as HTMLElement|null)?.blur(); // a focused button would swallow Z (jump)
+      this.countdownAt=performance.now();sfx('ANN-01');(document.activeElement as HTMLElement|null)?.blur(); // a focused button would swallow Z (jump)
     }
     if(action==='continue'){this.menu=false;this.scene.run?.resume();this.scene.fixed?.reset();this.render();focus(this.ui,0,this.returnFocus);}
     if(action==='restart'&&this.flow.flow==='P4'){this.menu=false;this.start();this.render();}
@@ -114,22 +117,22 @@ export class StationUI {
       this.armed='';this.render();focus(this.ui.querySelector<HTMLElement>('.modal.screen')!,0,'records-back');return;
     }
     if(action==='settings-time'&&this.menu&&this.flow.flow==='P0'){this.tier=P.timeTiers[(P.timeTiers.indexOf(this.tier)+1)%P.timeTiers.length];saveTier(this.tier);this.rankPage=0;this.render();focus(this.ui,0,action);}
-    if(action==='replay'&&this.adapter.replayEnabled&&this.flow.flow==='P7'){this.countdownAt=performance.now();this.render();}
+    if(action==='replay'&&this.adapter.replayEnabled&&this.flow.flow==='P7'){this.countdownAt=performance.now();sfx('ANN-01');this.render();}
   }
   input(a:Actions){
     if(document.activeElement instanceof HTMLInputElement)return true;
     if(this.flow.flow==='P0'&&(a.move||a.jump||a.confirm||a.back||a.dash||a.throw||a.home||a.pause)&&this.wake())return true;
-    if(a.back&&this.admin){this.act('records-back');return true;}
-    if(a.home||a.pause){this.admin=false;this.armed='';if(!this.menu)this.returnFocus=(document.activeElement as HTMLElement)?.dataset.action;this.menu=!this.menu;if(this.menu)this.scene.run?.pause();else this.scene.run?.resume();this.scene.fixed?.reset();this.render();if(!this.menu)focus(this.ui,0,this.returnFocus);return true;}
-    if(a.back&&this.menu){this.act('continue');return true;}
-    if(a.back&&this.boardOpen){this.act('close-ranking');return true;}
+    if(a.back&&this.admin){sfx('UI-03');this.act('records-back');return true;}
+    if(a.home||a.pause){sfx('UI-04');this.admin=false;this.armed='';if(!this.menu)this.returnFocus=(document.activeElement as HTMLElement)?.dataset.action;this.menu=!this.menu;if(this.menu)this.scene.run?.pause();else this.scene.run?.resume();this.scene.fixed?.reset();this.render();if(!this.menu)focus(this.ui,0,this.returnFocus);return true;}
+    if(a.back&&this.menu){sfx('UI-03');this.act('continue');return true;}
+    if(a.back&&this.boardOpen){sfx('UI-03');this.act('close-ranking');return true;}
     if(this.flow.flow==='P7'&&this.countdownAt&&!this.menu)return true;
     if(a.confirm&&this.flow.flow==='P3'&&!this.menu)this.act('start-game');
     const gameplay=(this.flow.flow==='P3'||this.flow.flow==='P4')&&!this.menu;
     if(!gameplay){
-      if(a.move&&(a.movePressed||a.move!==this.lastMove))focus(this.ui.querySelector<HTMLElement>('.modal.screen')??this.ui,a.move);
+      if(a.move&&(a.movePressed||a.move!==this.lastMove)){sfx('UI-01');focus(this.ui.querySelector<HTMLElement>('.modal.screen')??this.ui,a.move);}
       if((a.confirm||a.jump)&&this.ui.contains(document.activeElement))(document.activeElement as HTMLButtonElement)?.click();
-      if(a.back&&this.flow.flow==='P1'&&!this.menu)this.act('prev');
+      if(a.back&&this.flow.flow==='P1'&&!this.menu){sfx('UI-03');this.act('prev');}
     }
     this.lastMove=a.move;return !gameplay;
   }
@@ -193,7 +196,7 @@ export class StationUI {
         this.go('P5');
       }
     }
-    if(this.flow.flow==='P5'&&!this.menu&&now-this.entered>=(this.result?.endReason==='goal'?5000:3000))this.go('P6');
+    if(this.flow.flow==='P5'&&!this.menu&&now-this.entered>=(this.result?.endReason==='goal'?5000:3000)){this.go('P6');sfx('SYS-05');sfx('SYS-06',1.5);}
     if(this.flow.flow==='P7'&&this.countdownAt&&!this.menu){text(this.ui,'countdown',Math.max(1,Math.ceil((3000-now+this.countdownAt)/1000)));if(now-this.countdownAt>=3000){this.go('P4');this.result=null;this.start();}}
   }
   ranking(full=false,tier=this.tier){

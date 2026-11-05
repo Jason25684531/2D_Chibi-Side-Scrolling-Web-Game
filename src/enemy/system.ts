@@ -4,6 +4,9 @@ import type {GameplaySession} from '../core/session';
 import {TILE as T,weaponMode,type Mode} from '../core/config';
 import beholder from '../level/data/beholder.json';
 import charger from '../level/data/charger.json';
+import {sfx,type SfxId} from '../audio/sfx';
+// Sheet rows 06 丟出, 07 踩擊, 10 ROG Logo: every defeat plays HIT-02 on top of its cause.
+const DEFEAT:Record<'stomp'|'bolt'|'ally',SfxId[]>={stomp:['HIT-01','MOV-02','HIT-02'],bolt:['PWR-05','HIT-02'],ally:['HIT-04','HIT-02']};
 
 type Rect={x:number;y:number;w:number;h:number}; // top-left, px
 type Enemy=Rect&{id:string;kind:EnemyKind;spawn:EnemySpawn;home:Rect;dir:number;defeated:boolean;state:'patrol'|'chase'|'charge'|'fire'|'idle'|'rest';t:number;lost:number;cd:number;aim:number;anim:number;beam:{ax:number;ay:number;bx:number;by:number}|null;sprite:Phaser.GameObjects.Image};
@@ -38,7 +41,7 @@ export class EnemySystem {
   sees(ax:number,ay:number,bx:number,by:number){const e=this.ray(ax,ay,Math.atan2(by-ay,bx-ax),Math.hypot(bx-ax,by-ay));return Math.hypot(e.x-bx,e.y-by)<T/4;}
   get body(){return this.player.body as Phaser.Physics.Arcade.Body;}
   defeat(e:Enemy,how:'stomp'|'bolt'|'ally'){
-    if(e.defeated)return;e.defeated=true;e.beam=null;this.session.credit(e.id,how);
+    if(e.defeated)return;e.defeated=true;e.beam=null;this.session.credit(e.id,how);DEFEAT[how].forEach(id=>sfx(id));
     this.scene.tweens.add({targets:e.sprite,alpha:0,scaleY:e.sprite.scaleY*.4,duration:180});
   }
   /** Throw the selected attack item from `height` cells above the feet (planning v0.3 §3.2). */
@@ -63,12 +66,12 @@ export class EnemySystem {
     }else if(e.state==='chase'){
       e.dir=Math.sign(px-cx)||e.dir;e.lost=this.sees(cx,cy,px,py)?0:e.lost+dt;
       if(dist>A.lose*T||e.lost>A.giveUp){e.state='patrol';e.anim=0;return;}
-      if(e.spawn.laser&&e.cd<=0&&dist<e.spawn.range&&e.lost===0){const m=muzzle();e.state='charge';e.t=Z.charge;e.aim=Math.atan2(py-m.y,px-m.x);return;}
+      if(e.spawn.laser&&e.cd<=0&&dist<e.spawn.range&&e.lost===0){const m=muzzle();e.state='charge';e.t=Z.charge;e.aim=Math.atan2(py-m.y,px-m.x);sfx('ENM-03');return;}
       if(Math.abs(px-cx)>Math.max(e.spawn.laser?e.spawn.range*Z.keepAway:0,T*.2))this.walk(e,A.chase*T,dt);
     }else if(e.state==='charge'){
       e.t-=dt;const m=muzzle();
       if(e.t>Z.lock){e.dir=Math.sign(px-cx)||e.dir;e.aim=Math.atan2(py-m.y,px-m.x);} // aim follows until locked
-      if(e.t<=0){const end=this.ray(m.x,m.y,e.aim,e.spawn.range);e.state='fire';e.t=Z.fire;e.beam={ax:m.x,ay:m.y,bx:end.x,by:end.y};}
+      if(e.t<=0){const end=this.ray(m.x,m.y,e.aim,e.spawn.range);e.state='fire';e.t=Z.fire;e.beam={ax:m.x,ay:m.y,bx:end.x,by:end.y};sfx('ENM-04');}
     }else if(e.state==='fire'){
       e.t-=dt;const b=e.beam!,r=Z.width*T/2,n=Math.ceil(Math.hypot(b.bx-b.ax,b.by-b.ay)/(T/8));
       for(let i=0;i<=n;i++){const x=b.ax+(b.bx-b.ax)*i/n,y=b.ay+(b.by-b.ay)*i/n;if(x>p.x+2-r&&x<p.x+p.w-2+r&&y>p.y+3-r&&y<p.y+p.h-1+r){this.hurt('laser');break;}}
@@ -77,7 +80,7 @@ export class EnemySystem {
   }
   private charger(e:Enemy,p:Rect,dt:number){
     let sp=0;const dx=p.x+p.w/2-(e.x+e.w/2),dyf=Math.abs(p.y+p.h-(e.y+e.h));
-    if(e.state==='idle'){if(Math.abs(dx)<7*T&&dyf<2*T){e.state='charge';e.dir=Math.sign(dx)||-1;e.t=1.4;e.anim=0;}}
+    if(e.state==='idle'){if(Math.abs(dx)<7*T&&dyf<2*T){e.state='charge';e.dir=Math.sign(dx)||-1;e.t=1.4;e.anim=0;sfx('ENM-01');sfx('ENM-02');}}
     else if(e.state==='charge'){sp=7*T;e.t-=dt;if(e.t<=0){e.state='rest';e.t=1;e.anim=0;}}
     else{e.t-=dt;if(e.t<=0){e.state='idle';e.anim=0;}}
     if(sp){
