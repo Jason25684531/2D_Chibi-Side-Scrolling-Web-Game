@@ -33,3 +33,9 @@ test('attack item modes: C hits one, B pierces two, A bursts; side contact hurts
  await page.evaluate(()=>{const s=(window as any).__gameplay;s.session.activate('ally','fixture');});await page.waitForTimeout(100);
  expect(await page.evaluate(()=>{const s=(window as any).__gameplay;return[s.body.width,s.body.height,s.session.power.ally];})).toEqual([24,64,true]);
 });
+test('respawning onto an enemy home grants 1.5 s immunity instead of a respawn loop (editor fallReset inv=1.5)',async({page})=>{
+ await page.goto('/?debug=1');await page.waitForFunction(()=>(window as any).__gameplay?.body?.blocked.down);
+ await page.evaluate(()=>{const s=(window as any).__gameplay,e=s.enemies.enemies.find((x:any)=>x.id==='e76');s.session.badges.held=0;s.respawner.safe={x:e.home.x+e.home.w/2,y:e.home.y+e.home.h-32};s.respawn('pit');});
+ await page.waitForTimeout(600);
+ expect(await page.evaluate(()=>(window as any).__gameplay.session.stats.respawns)).toBe(1);
+});

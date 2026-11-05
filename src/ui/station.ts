@@ -147,8 +147,9 @@ export class StationUI {
     if(this.flow.flow==='P0'){
       if(!this.attract&&!this.menu&&now-this.idleSince>=ATTRACT_IDLE){this.attract=true;this.render();}
       // Wall and TOP 20 share the screen: wall scrolls on a 20 s cycle, board flips page every 10 s when there is a second page.
-      const t=now-this.entered,page=this.adapter.board(this.tier).length>10?Math.floor(t/10000)%2:0;
-      if(page!==this.rankPage&&!this.menu){this.rankPage=page;this.render();}
+      // Count only (records are unbounded); no flip under the attract video, a render would rebuild and restart it.
+      const t=now-this.entered,page=this.adapter.records.filter(r=>r.tier===String(this.tier)).length>10?Math.floor(t/10000)%2:0;
+      if(page!==this.rankPage&&!this.menu&&!this.attract){this.rankPage=page;this.render();}
       const wall=this.ui.querySelector('.wall');if(wall)wall.scrollLeft=(t%20000/20000)*Math.max(0,wall.scrollWidth-wall.clientWidth);
     }
     if(this.flow.flow==='P1'){

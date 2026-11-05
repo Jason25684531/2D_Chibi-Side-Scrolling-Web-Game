@@ -2,7 +2,8 @@ import {describe,it,expect} from 'vitest';
 import {GameplaySession} from '../../src/core/session';
 describe('Badge / Damage / Power-up / Combo / Score / Timer',()=>{
   it('picks once, scatters, recovers before 5s and expires exactly at deadline',()=>{const s=new GameplaySession(60,'s');s.pickup('b');s.pickup('b');expect(s.badges.held).toBe(1);const d=s.hit('enemy').drops;expect(d).toHaveLength(1);expect(s.pickup(d[0])).toBe(false);s.tick(.3);expect(s.pickup(d[0])).toBe(true);s.tick(1.2);const next=s.hit('enemy').drops;s.tick(5);expect(s.pickup(next[0])).toBe(false);expect(s.badges.held).toBe(0);});
-  it('protects for 1.5s and zero badges asks for respawn, not game over',()=>{const s=new GameplaySession(60,'s');s.pickup('a');expect(s.hit('e').kind).toBe('scatter');s.tick(1.49);expect(s.hit('e').kind).toBe('immune');s.tick(.01);expect(s.hit('e').kind).toBe('respawn');expect(s.result).toBeNull();});
+  it('protects for 1.5s and zero badges asks for respawn, not game over',()=>{const s=new GameplaySession(60,'s');s.pickup('a');expect(s.hit('e').kind).toBe('scatter');s.tick(1.49);expect(s.hit('e').kind).toBe('immune');s.tick(.01);expect(s.hit('e').kind).toBe('respawn');expect(s.result).toBeNull();
+    s.respawn('e');s.recovered();expect(s.hit('e').kind).toBe('immune');s.tick(1.5);expect(s.hit('e').kind).toBe('respawn');}); // zero-badge respawn is protected too
   it('freezes all deadlines while paused',()=>{const s=new GameplaySession(60,'s');s.activate('ally','a');s.credit('e');s.run.pause();s.tick(20);expect(s.run.remaining).toBe(60);expect(s.power.ally).toBe(true);expect(s.combo.count).toBe(1);});
   it('attack item and invincibility coexist; throw gated by item and cooldown; Ally expires; hurt immunity separate',()=>{
     const s=new GameplaySession(60,'s');expect(s.power.throw(0,.4)).toBe(false);

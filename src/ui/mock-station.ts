@@ -5,6 +5,8 @@ export type Identity={sessionId:string;nickname:string;characterId?:string;attac
 export type Ranking={runId:string;nickname:string;score:number;tier:string;titles:string[];characterId?:string;completedAt?:string};
 const RECORDS_KEY='rog-future-gamer.records.v1';
 const SEQ_KEY='fg3-plyr-seq',TIME_KEY='rog-future-gamer.time',REPLAY_KEY='rog-future-gamer.replay';
+/** P0 wall keeps the most recent players only, so an all-day kiosk does not grow memory or DOM. Calibration knob. */
+export const WALL_MAX=30;
 /** Operator run length from the P0 system menu; falls back to config when unset, invalid or storage is denied. */
 export function savedTier(){try{const n=Number(localStorage.getItem(TIME_KEY));if(P.timeTiers.includes(n))return n;}catch{/* storage denied */}return P.timeTier;}
 export function saveTier(n:number){try{localStorage.setItem(TIME_KEY,String(n));}catch{/* storage denied: this session only */}}
@@ -62,10 +64,13 @@ export class MockStation {
     if(!this.current||this.records.some(r=>r.runId===result.runId))return;
     const row={runId:result.runId,nickname:this.current.nickname.trim().slice(0,24)||'Future Gamer',score:result.score,tier:result.timeTier,titles:titles(result),characterId:this.current.characterId??'a',completedAt:new Date().toISOString()};
     // The face composite goes to the in-memory wall only, never into the persisted record.
-    this.records.push(row);this.wall.set(this.current.sessionId,{...row,look:this.current.custom?this.current.looks?.[row.characterId]?.idle1:undefined});this.persist();
+    this.records.push(row);this.wall.set(this.current.sessionId,{...row,look:this.current.custom?this.current.looks?.[row.characterId]?.idle1:undefined});
+    if(this.wall.size>WALL_MAX)this.wall.delete(this.wall.keys().next().value!); // Map order = oldest first
+    this.persist();
   }
   /** Operator: drop one record (and its wall card), or every record on every tier. */
   remove(runId:string){this.records=this.records.filter(r=>r.runId!==runId);for(const [k,r] of this.wall)if(r.runId===runId)this.wall.delete(k);this.persist();}
-  clear(){this.records=[];this.wall.clear();this.persist();}
+  /** Explicit operator reset may overwrite unreadable storage; automatic paths still keep it. */
+  clear(){this.records=[];this.wall.clear();this.writable=true;this.persist();}
   board(tier:number){return this.records.filter(r=>r.tier===String(tier)).sort((a,b)=>b.score-a.score);}
 }

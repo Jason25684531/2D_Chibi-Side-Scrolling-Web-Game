@@ -37,7 +37,7 @@ export class GameplaySession {
   respawn(cause:string){
     if(this.run.phase!=='running')return false;
     const drops=cause==='pit'?this.badges.scatter(this.run.elapsed):[];
-    this.run.respawn();this.power.clear();this.combo.reset();this.damage.immuneUntil=drops.length?this.run.elapsed+1.5:0;this.stats.respawns++;
+    this.run.respawn();this.power.clear();this.combo.reset();this.damage.immuneUntil=this.run.elapsed+1.5;this.stats.respawns++; // editor fallReset: inv=1.5 on every respawn, so enemies back at home cannot chain respawns
     if(cause==='pit')this.emit('PLAYER_FELL','player',cause);
     if(drops.length)this.emit('BADGE_SCATTERED','player',cause);
     return drops;

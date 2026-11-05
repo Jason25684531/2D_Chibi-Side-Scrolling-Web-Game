@@ -1,7 +1,7 @@
-import {it,expect} from 'vitest';
+import {it,expect,vi} from 'vitest';
 import {InputAdapter} from '../../src/input/adapter';
 import {escape,button,time} from '../../src/ui/components';
-import {MockStation,titles,validRanking} from '../../src/ui/mock-station';
+import {MockStation,titles,validRanking,WALL_MAX} from '../../src/ui/mock-station';
 import {GameplaySession} from '../../src/core/session';
 it('escapes untrusted identity, supplies native disabled controls and formats timer',()=>{
   expect(escape('<script>"&')).toBe('&lt;script&gt;&quot;&amp;');
@@ -28,4 +28,16 @@ it('maps planning keys Z X C ↓ and keeps Confirm/Back',()=>{
   input.codes.clear();input.codes.add('Backspace');expect(input.sample().back).toBe(true);
   for(const [code,action] of [['KeyZ','jump'],['KeyX','dash'],['KeyC','throw'],['ArrowDown','down']] as const){const k=new InputAdapter();k.codes.add(code);expect(k.sample()[action]).toBe(true);}
   const pad=new InputAdapter();expect(pad.sample({axes:[],buttons:[{pressed:true}]}).confirm).toBe(true);
+});
+it('keeps the newest WALL_MAX players on the wall and lets the operator reset unreadable storage',()=>{
+  const a=new MockStation(),run=(n:string)=>{a.enqueue(n);const s=new GameplaySession(100,a.current.sessionId);s.tick(100);a.save(s.finish('time-up')!);a.exit();};
+  for(let i=0;i<=WALL_MAX;i++)run('P'+i);
+  expect(a.wall.size).toBe(WALL_MAX);expect([...a.wall.values()].some(r=>r.nickname==='P0')).toBe(false);expect(a.records).toHaveLength(WALL_MAX+1);
+  const store=new Map<string,string>([['rog-future-gamer.records.v1','{broken']]);
+  vi.stubGlobal('window',{});vi.stubGlobal('localStorage',{getItem:(k:string)=>store.get(k)??null,setItem:(k:string,v:string)=>store.set(k,v)});
+  try{
+    const b=new MockStation();expect(b.storageStatus).toBe('error');
+    b.clear();b.enqueue('After');const s=new GameplaySession(100,b.current.sessionId);s.tick(100);b.save(s.finish('time-up')!);
+    expect(b.storageStatus).toBe('ready');expect(JSON.parse(store.get('rog-future-gamer.records.v1')!).records).toHaveLength(1);
+  }finally{vi.unstubAllGlobals();}
 });
