@@ -16,9 +16,9 @@ test('Home traps focus before a run and above Replay countdown; Back restores fl
 test('M5 three-step readiness (character → attack item → nickname), Back, no P2 screen and isolated tutorial',async({page})=>{
   const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto('/');await expect(page.locator('[data-screen=P0]')).toBeVisible();
-  await page.keyboard.press('Enter');await expect(page.locator('[data-screen=P1] .character-card')).toHaveCount(3);await expect(page.locator('[data-action=ready]')).toBeFocused();
+  await page.keyboard.press('Enter');await expect(page.locator('[data-screen=P1] .character-card')).toHaveCount(5);await expect(page.locator('.character-card.locked:disabled')).toHaveCount(2);await expect(page.locator('[data-action=ready]')).toBeFocused();
   await page.keyboard.press('Enter');await expect(page.locator('.item-card')).toHaveCount(5);
-  await page.keyboard.press('Backspace');await expect(page.locator('.character-card')).toHaveCount(3);
+  await page.keyboard.press('Backspace');await expect(page.locator('.character-card')).toHaveCount(5);
   await page.keyboard.press('KeyZ');await expect(page.locator('.item-card')).toHaveCount(5);
   await page.keyboard.press('Enter');await expect(page.locator('#nickname')).toHaveValue(/^PLYR\d{4}$/);await expect(page.locator('#nickname')).toHaveAttribute('maxlength','8');
   await page.keyboard.press('Enter');await expect(page.locator('[data-screen=P3]')).toBeVisible();
@@ -94,7 +94,7 @@ test('split CTA: BACK steps back, then leaves the queue from step 1; PLAY re-ent
   await page.keyboard.press('Enter');await expect(page.locator('[data-action=ready]')).toBeFocused();
   await page.keyboard.press('Enter');await expect(page.locator('.item-card')).toHaveCount(5);await expect(page.locator('[data-action=ready]')).toBeFocused();
   await page.keyboard.press('ArrowLeft');await expect(page.locator('[data-action=prev]')).toBeFocused();await page.keyboard.press('Enter');
-  await expect(page.locator('.character-card')).toHaveCount(3);await expect(page.locator('[data-action=ready]')).toBeFocused();
+  await expect(page.locator('.character-card')).toHaveCount(5);await expect(page.locator('[data-action=ready]')).toBeFocused();
   await page.locator('[data-action=prev]').click();
   await expect(page.locator('[data-screen=P0]')).toBeVisible();expect(await page.evaluate(()=>(window as any).__station.adapter.queue.length)).toBe(0);
   await page.keyboard.press('Enter');await expect(page.locator('[data-screen=P1]')).toBeVisible();await page.keyboard.press('Backspace');await expect(page.locator('[data-screen=P0]')).toBeVisible();

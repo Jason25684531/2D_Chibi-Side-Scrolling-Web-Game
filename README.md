@@ -1,8 +1,8 @@
 # ROG FUTURE GAMER — Experience 3：Q 版橫向卷軸 Web Game
 
-以 **Phaser 3 + TypeScript + Vite** 打造的 2D 橫向卷軸灰盒（Greybox）遊戲，設計給展場 Kiosk「Station」使用：玩家選角、選時間、闖關收集 ROG 徽章，最後結算分數並上排行榜。
+以 **Phaser 3 + TypeScript + Vite** 打造的 2D 橫向卷軸灰盒（Greybox）遊戲，設計給展場 Kiosk「Station」使用：玩家選角、選攻擊道具、闖關收集 ROG 徽章，最後結算分數並上排行榜。
 
-> 目前規則狀態為 `test-only`（見 `src/core/config.ts` 的 `TEST_PROFILE`），尚有待決議規則 `C3, B1, B5, B6, B10, B11`。
+> 目前規則狀態為 `test-only`（見 `src/core/config.ts` 的 `TEST_PROFILE`），尚有待決議規則 `C3, B10, B11`。關卡與玩法數值以 `1102_關卡編輯器` 的 `level_editor.html` 為準。
 
 ---
 
@@ -16,7 +16,7 @@
 | `npm run typecheck` | 只跑 TypeScript 型別檢查 |
 | `npm test` | Vitest 單元 + 整合測試 |
 | `npm run test:browser` | Playwright 瀏覽器端測試 |
-| `npm run assets:stage` | 將角色／徽章素材整理到 `public/` |
+| `npm run assets:stage` | 從 `1102_關卡編輯器` 封包把關卡、角色、怪物、道具素材整理到 `public/assets/cyber-run/` |
 
 | 入口網址 | 說明 |
 |---|---|
@@ -86,11 +86,11 @@ flowchart TB
 | 層級 | 目錄 | 職責 | 是否依賴 Phaser |
 |---|---|---|---|
 | ① 入口層 | `src/main.ts` | 建立遊戲實例、註冊場景、綁定 Start/Pause/Home 按鈕、視窗失焦自動暫停 | ✅ |
-| ② 介面層 | `src/ui/` | Station 的 DOM 介面（選角、選時間、結算、排行榜）與 HUD | 部分 |
+| ② 介面層 | `src/ui/` | Station 的 DOM 介面（選角、攻擊道具、暱稱、結算、排行榜）與 HUD | 部分 |
 | ③ 場景層 | `src/scenes/` | 素材預載、主遊戲場景；固定步長迴圈、組裝各系統 | ✅ |
-| ④ 世界系統層 | `src/player` `terrain` `enemy` `badge/world` `camera` `respawn` `physics` `assets` | 場景中的物件、碰撞、移動與表現 | ✅ |
+| ④ 世界系統層 | `src/player` `terrain` `enemy` `badge/world` `camera` `respawn` `physics` `assets` `audio` | 場景中的物件、碰撞、移動、表現與音效 | ✅ |
 | ⑤ 規則核心層 | `src/core` `badge/system` `damage` `powerup` `combo` `score` | 回合狀態、計時、計分、事件，純 TypeScript | ❌ |
-| ⑥ 資料層 | `src/core/config.ts` `src/level/data.ts` `assets/*.json` | 調校參數、關卡資料、素材清單 | ❌ |
+| ⑥ 資料層 | `src/core/config.ts` `src/level/data.ts` `src/level/data/*.json` | 調校參數、關卡資料、素材清單 | ❌ |
 
 ---
 
@@ -110,10 +110,10 @@ flowchart TB
 
 | 檔案 | 類別 | 說明 |
 |---|---|---|
-| `badge/system.ts` | `BadgeSystem` | 持有徽章數量、受傷散落（上限 10）、拾取延遲 |
+| `badge/system.ts` | `BadgeSystem` | 持有徽章數量、受傷散落（上限 12、5 秒消失）、拾取延遲 |
 | `damage/system.ts` | `DamageSystem` | 判斷受傷結果：無敵 / 散落徽章 |
-| `powerup/system.ts` | `PowerUpSystem` | 道具：`laptop`、`ally`（放大 1.5 倍） |
-| `combo/system.ts` | `ComboSystem` | 連擊計數與倍率（1 → 1.2 → 1.5 → 2 → 2.5） |
+| `powerup/system.ts` | `PowerUpSystem` | 道具：`laptop` 攻擊道具（可投擲）、`ally` 無敵 10 秒；兩者可同時持有 |
+| `combo/system.ts` | `ComboSystem` | 連擊計數與倍率（1 → 1.5 → 2 → 2.5，4 秒內接續） |
 | `score/engine.ts` | `ScoreEngine` | 擊敗敵人、徽章、剩餘時間的分數結算與明細 |
 
 ### 世界系統（Phaser 相關）
@@ -124,13 +124,16 @@ flowchart TB
 | `input/adapter.ts` | `InputAdapter` | 鍵盤 + 搖桿統一成 `Actions`（含 deadzone） |
 | `physics/step.ts` | `stepPhysics` | 手動驅動 Arcade Physics 一步 |
 | `terrain/system.ts` | `TerrainSystem` | 地形：地面、平台、單向、移動、彈跳、斜坡 |
-| `enemy/system.ts` | `EnemySystem` | 敵人：近戰 `melee`、遠程 `ranged`、無人機 `drone` |
+| `enemy/system.ts` | `EnemySystem`、`KINDS` | 敵人：眼魔 `beholder`（巡邏／追擊／雷射）、魔蛛 `charger`（衝撞）；各種類的 AI、動畫與特效在 `KINDS` 行為表，新增怪物只加一筆；另含投擲物與範圍攻擊 |
 | `badge/world.ts` | `BadgeWorld` | 場景中的徽章物件與拾取判定 |
 | `camera/manager.ts` | `CameraManager` | 鏡頭跟隨與邊界 |
 | `respawn/manager.ts` | `RespawnManager` | 掉坑後找安全點重生 |
-| `level/data.ts` | `LEVEL`、`TUTORIAL_LEVEL`、`validateLevel` | 正式關卡（寬 4000）與新手訓練關（寬 1600）資料 |
-| `assets/characters.ts` | `CharacterView` | 三位角色（aria / kael / riven）的動畫呈現 |
-| `assets/laboratory.ts` | `laboratory` | 實驗室場景背景佈置 |
+| `level/data.ts` | `LEVEL`、`TUTORIAL_LEVEL`、`validateLevel` | 讀入關卡編輯器的 `fg3-level` JSON（`level/data/level.json`）；新手訓練關＝正式關卡左側 40×23 格切片 |
+| `assets/characters.ts` | `CharacterView`、`Shield` | 角色 S3WW／S2AM（含 CUSTOM 頭像）的動畫、受擊閃爍、無敵放大與能量護罩 |
+| `assets/level-art.ts` | `levelArt` | 背景、鋪設美術、彈跳板、移動平台、傳送門、道具動態；地燈踩到才亮 |
+| `assets/electric.ts` | `electricFx`、`scanLines` | 電網與雷射陷阱的電弧特效；從美術圖判讀雷射線／燈條 |
+| `assets/player-fx.ts` | `playerFx` | 衝刺殘影與速度線、起跳氣流、二段跳光環、踩怪衝擊 |
+| `audio/sfx.ts` | `sfx`、`hold`、`listen` | 音效對照表（39 個 ID）、事件觸發與循環音 |
 
 ### 介面（`src/ui/`）
 
@@ -160,8 +163,8 @@ flowchart LR
 | 階段 | 畫面 | 說明 |
 |---|---|---|
 | P0 | 待機牆 | 玩家牆 + TOP 20；按 PLAY（Z／Enter）排入後進 P1 |
-| P1 | 準備 | 角色 S3WW／S2AM／CUSTOM（拍照、可重拍，再選身體）→ 攻擊道具 → 暱稱（最多 8 字）；主鍵分上一步／下一步，第一步的上一步回 P0 |
-| P2 | 直通 | 不顯示畫面，固定 100 秒 |
+| P1 | 準備 | 角色 S3WW／S2AM／CUSTOM（拍照、可重拍，再選身體；另有兩格長官 VIP 欄位，暫時鎖定）→ 攻擊道具 → 暱稱（最多 8 字）；主鍵分上一步／下一步，第一步的上一步回 P0 |
+| P2 | 直通 | 不顯示畫面；局長預設 120 秒，營運人員可在 P0 系統選單（H）切換 60／90／100／120 |
 | P3 | 新手訓練場 | 在訓練切片自由練習（不計分、不限時），按「開始遊戲」（Enter）後倒數 3 秒進 P4 |
 | P4 | 遊戲中 | 正式關卡 + HUD |
 | P5 | 結束畫面 | GOAL! 停留 5 秒，TIME UP 停留 3 秒 |
@@ -190,12 +193,11 @@ flowchart LR
 | 路徑 | 內容 |
 |---|---|
 | `src/` | 遊戲原始碼（見上方模組說明） |
-| `assets/` | 素材清單：`character-manifest.json`、`badge-manifest.json` |
 | `public/` | 執行時素材（由 `npm run assets:stage` 產生，不進版控） |
 | `tests/unit/` | 規則、控制器、關卡、排行榜、UI 的單元測試 |
 | `tests/integration/` | `run-loop.test.ts`：完整一局流程 |
 | `tests/browser/` | Playwright：移動、地形、斜坡、徽章、Station、UIUX 等 |
-| `tools/` | 素材整理腳本（`stage-assets.py`、`subset-fonts.py`、`inspect-character-assets.py`） |
+| `tools/` | 素材整理腳本（`stage-assets.py`、`subset-fonts.py`） |
 | `docs/` | 需求審查、素材盤點、測試設定、UIUX 報告、交付紀錄 |
 | `openspec/specs/` | 12 項能力規格（runtime、player-input、physics-terrain、enemy、station-ui…） |
 

@@ -16,10 +16,11 @@ function bolt(g:G,ax:number,ay:number,bx:number,by:number,rnd:()=>number,a=1){
   pts.push([bx,by]);
   for(const [color,w,al] of [[0x38d9ff,.16,.35],[0xbff6ff,.06,.9],[0xffffff,.025,1]])stroke(g,pts,T*w,color,a*al);
 }
-/** Editor laserLines: long red horizontal runs in the art image, as 0..1 fractions. Cached per texture. */
+/** Editor laserLines / lampBars: per row, the longest run of pixels passing `on`; runs at least minRun x width wide,
+ *  merged when rows are at most gap(h) apart, as 0..1 fractions. Cached per texture and kind. */
 const lineCache=new Map<string,Line[]>();
-function laserLines(scene:Phaser.Scene,key:string){
-  if(lineCache.has(key))return lineCache.get(key)!;
+export function scanLines(scene:Phaser.Scene,key:string,kind:string,on:(r:number,g:number,b:number,a:number)=>boolean,minRun:number,gap:(h:number)=>number){
+  const id=kind+'|'+key;if(lineCache.has(id))return lineCache.get(id)!;
   const lines:Line[]=[];
   try{
     const img=scene.textures.get(key).getSourceImage() as HTMLImageElement,k=Math.min(1,512/img.width),w=Math.max(1,Math.round(img.width*k)),h=Math.max(1,Math.round(img.height*k));
@@ -27,15 +28,16 @@ function laserLines(scene:Phaser.Scene,key:string){
     const d=c.getImageData(0,0,w,h).data,rows:{y:number;x0:number;x1:number}[]=[];
     for(let y=0;y<h;y++){
       let best=0,bs=0,run=0,st=0;
-      for(let x=0;x<=w;x++){const i=(y*w+x)*4,red=x<w&&d[i+3]>120&&d[i]>170&&d[i]-Math.max(d[i+1],d[i+2])>70;if(red){if(!run)st=x;run++;}else{if(run>best){best=run;bs=st;}run=0;}}
-      if(best>=w*.2)rows.push({y,x0:bs,x1:bs+best});
+      for(let x=0;x<=w;x++){const i=(y*w+x)*4,hit=x<w&&on(d[i],d[i+1],d[i+2],d[i+3]);if(hit){if(!run)st=x;run++;}else{if(run>best){best=run;bs=st;}run=0;}}
+      if(best>=w*minRun)rows.push({y,x0:bs,x1:bs+best});
     }
     let cur:{ya:number;yb:number;x0:number;x1:number}|null=null;
-    for(const r of rows){if(cur&&r.y-cur.yb<=Math.max(5,h*.012)){cur.yb=r.y;cur.x0=Math.min(cur.x0,r.x0);cur.x1=Math.max(cur.x1,r.x1);}else{if(cur)lines.push({y:(cur.ya+cur.yb+1)/2/h,x0:cur.x0/w,x1:cur.x1/w,t:(cur.yb-cur.ya+1)/h});cur={ya:r.y,yb:r.y,x0:r.x0,x1:r.x1};}}
+    for(const r of rows){if(cur&&r.y-cur.yb<=gap(h)){cur.yb=r.y;cur.x0=Math.min(cur.x0,r.x0);cur.x1=Math.max(cur.x1,r.x1);}else{if(cur)lines.push({y:(cur.ya+cur.yb+1)/2/h,x0:cur.x0/w,x1:cur.x1/w,t:(cur.yb-cur.ya+1)/h});cur={ya:r.y,yb:r.y,x0:r.x0,x1:r.x1};}}
     if(cur)lines.push({y:(cur.ya+cur.yb+1)/2/h,x0:cur.x0/w,x1:cur.x1/w,t:(cur.yb-cur.ya+1)/h});
   }catch{/* unreadable texture: no lines, art still shows */}
-  lineCache.set(key,lines);return lines;
+  lineCache.set(id,lines);return lines;
 }
+const laserLines=(scene:Phaser.Scene,key:string)=>scanLines(scene,key,'laser',(r,g,b,a)=>a>120&&r>170&&r-Math.max(g,b)>70,.2,h=>Math.max(5,h*.012));
 export function electricFx(scene:GameplayScene,clip?:{cols:number;rows:number}){
   const base=scene.add.graphics().setDepth(-9),glow=scene.add.graphics().setDepth(-9).setBlendMode(Phaser.BlendModes.ADD),over=scene.add.graphics().setDepth(7).setBlendMode(Phaser.BlendModes.ADD);
   const nets=scene.terrain.hazards.map(h=>({x0:h.x-h.width/2,x1:h.x+h.width/2,y:h.y-h.height/2,c0:Math.round((h.x-h.width/2)/T),r:Math.round((h.y-h.height/2)/T)}));

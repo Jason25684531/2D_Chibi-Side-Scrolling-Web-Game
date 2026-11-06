@@ -7,6 +7,8 @@ test('D4/D5: physical pickup, stomp, scatter/recovery, respawn credit, coexistin
   await page.waitForFunction(()=>(window as any).__gameplay.session.badges.held>=1);
   const stomp=()=>page.evaluate(()=>{const s=(window as any).__gameplay;const e=s.enemies.enemies.find((x:any)=>x.id==='e66');s.body.reset(e.x+e.w/2,e.y-34);s.body.setVelocity(0,160);});
   await stomp();await page.waitForFunction(()=>(window as any).__gameplay.enemies.enemies.find((x:any)=>x.id==='e66').defeated);
+  // Editor pop(): the credited points float up from the enemy.
+  expect(await page.evaluate(()=>(window as any).__gameplay.children.list.some((o:any)=>o.type==='Text'&&o.text==='+20'))).toBe(true);
   const score=await page.evaluate(()=>(window as any).__gameplay.session.score.total);expect(score).toBe(20);
   await page.evaluate(()=>{const s=(window as any).__gameplay;s.body.reset(300,500);s.takeDamage('fixture');});
   expect(await page.evaluate(()=>(window as any).__gameplay.session.badges.dropped)).toBe(true);

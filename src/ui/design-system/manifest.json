@@ -7,12 +7,9 @@
   "tokens": "tokens.css",
   "specification": "../../../DESIGN.md",
   "assets": [
-    {"id":"characters","status":"existing","source":"webUIUX_Ref/characters","characters":["aria","kael","riven"],"purpose":"selection, avatar, world presentation","preserveOriginal":true},
-    {"id":"dog","status":"existing","source":"webUIUX_Ref/element_img/Emeny_Dog.png","purpose":"enemy appearance only"},
-    {"id":"badge","status":"existing","source":"public/assets/collectibles/badge/badge.png","purpose":"collectible and HUD"},
-    {"id":"laboratory","status":"required-placeholder","size":[960,1100],"layers":3,"source":"src/assets/laboratory.ts","purpose":"independent cached tiled parallax textures; replace with approved laboratory art"},
-    {"id":"props","status":"required-placeholder","source":"src/assets/laboratory.ts","purpose":"editable Phaser geometry sized to existing level: mechanical arm, goal, laptop, ally and bounce decoration"},
-    {"id":"avatars","status":"existing","size":[256,256],"source":"webUIUX_Ref/characters/{id}/hero_action_bundle/processed/idle/{id}-idle-01.png","runtime":"public/assets/ui/{id}.png","purpose":"unchanged transparent portraits; enlarged hero may appear soft"},
+    {"id":"cyber-run","status":"existing","source":"1102_關卡編輯器/CYBER_RUN_1101_可直接開啟/game","runtime":"public/assets/cyber-run/{art,bg,chars,items,monsters}","index":"src/level/data/assets.json","tool":"tools/stage-assets.py","purpose":"level art, characters S3WW/S2AM, monsters, items, badge and shield; staged at <=128 px per cell"},
+    {"id":"attract","status":"existing","source":"1102_關卡編輯器/CYBER_RUN_首頁待機巡覽_1920x1080_60fps.mp4","runtime":"public/assets/cyber-run/attract.mp4","purpose":"P0 idle attract video"},
+    {"id":"dog","status":"existing","source":"webUIUX_Ref/element_img/Emeny_Dog.png","runtime":"public/assets/ui/enemy-dog.png","purpose":"P7 play-again art"},
     {"id":"official-logo","status":"missing","purpose":"use plain text branding until approved original is available"},
     {"id":"fonts","status":"existing","license":"OFL-1.1","source":"github.com/google/fonts ofl/{orbitron,rajdhani,notosanstc}","runtime":"public/assets/fonts/*.woff2","licenseFiles":"public/assets/fonts/*-OFL.txt","tool":"tools/subset-fonts.py","purpose":"Orbitron display/numbers, Rajdhani labels, Noto Sans TC Chinese (UI glyph subset); system font fallback"}
   ]

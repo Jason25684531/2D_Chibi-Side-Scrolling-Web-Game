@@ -182,6 +182,9 @@ kbd{margin-right:10px;padding:4px 10px;border:1px solid var(--rog-line);backgrou
 .section-title span{font:600 16px var(--font-label);letter-spacing:.3em;text-transform:uppercase;color:var(--rog-muted)}
 .cards{position:absolute;left:96px;top:300px;display:flex;gap:24px}
 .character-card{width:236px;height:352px}
+/* Step 1 holds five cards (3 + 2 locked VIP) left of the hero at x1000. */
+.cards:not(.bodies){gap:16px}.cards:not(.bodies) .character-card{width:164px}.cards:not(.bodies) .character-card .name strong{font-size:25px}.cards:not(.bodies) .character-card .name small{font-size:12px;letter-spacing:.06em}
+.character-card.locked{opacity:.45;border-style:dashed;cursor:not-allowed}.character-card.locked:hover{transform:none;border-color:rgba(58,160,255,.55)}
 .character-card .art>.ic{width:120px;height:120px;margin-bottom:60px;stroke:var(--rog-muted);stroke-width:1.4;fill:none}.character-card .art>.photo{height:150px;margin-bottom:50px;border-radius:50%}
 /* P1 photo step (UC03-1): round viewfinder + shoot/retake, body cards beside it. */
 .booth{position:absolute;left:96px;top:300px;width:420px;display:flex;flex-direction:column;align-items:center;gap:24px}

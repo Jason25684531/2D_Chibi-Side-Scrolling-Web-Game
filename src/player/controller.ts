@@ -6,22 +6,25 @@ const STEP=.25; // s between footsteps (MOV-01), calibration knob
 type PlayerState='IDLE'|'RUN'|'JUMP'|'DOUBLE_JUMP'|'DASH'|'HURT'|'FALL'|'WIN';
 // Planning v0.3 §3.1 controller: coyote time, jump cut x0.45, separate double-jump speed, terminal fall speed, ↓ drop-through.
 export class PlayerController {
-  state:PlayerState='IDLE'; facing=1; jumps=0; dashUntil=0; dashReady=0; hurtUntil=0; coyoteUntil=0; dropUntil=0; private cut=true; private stepAt=0;
+  state:PlayerState='IDLE'; facing=1;
+  /** Presentation only (editor jumpFx / dashPuff): where and when the last jump or dash started. */
+  jumpFx={x:0,y:0,t0:-9,dj:false}; dashFx={x:0,y:0,t0:-9,dir:1,air:false};
+  jumps=0; dashUntil=0; dashReady=0; hurtUntil=0; coyoteUntil=0; dropUntil=0; private cut=true; private stepAt=0;
   constructor(readonly body:Phaser.Physics.Arcade.Body) {body.setMaxVelocity(Math.max(P.dashSpeed,P.speed*P.allySpeed),P.bounceSpeed);}
   update(a:Actions,now:number,dt:number,speedScale=1) {
     const b=this.body,grounded=b.blocked.down||b.touching.down;
     if(grounded && b.velocity.y>=0) {if(this.jumps)sfx('MOV-04');this.jumps=0;this.cut=true;this.coyoteUntil=now+P.coyoteTime;}
     if(a.move && now>=this.dashUntil) this.facing=a.move; // dash direction locks at start
     if(now<this.hurtUntil){this.state='HURT';b.allowGravity=true;return;}
-    if(a.dash && now>=this.dashReady) {this.dashUntil=now+P.dashDuration;this.dashReady=now+P.dashCooldown;sfx('MOV-05');}
+    if(a.dash && now>=this.dashReady) {this.dashUntil=now+P.dashDuration;this.dashReady=now+P.dashCooldown;this.dashFx={x:b.x+b.width/2,y:b.bottom,t0:now,dir:this.facing,air:!grounded};sfx('MOV-05');}
     if(now<this.dashUntil) {this.state='DASH';b.allowGravity=false;b.setVelocity(this.facing*P.dashSpeed,0);return;}
     b.allowGravity=true;
     const target=a.move*P.speed*speedScale, amount=(grounded?P.groundAcceleration:P.airAcceleration)*dt;
     b.setVelocityX(b.velocity.x+Math.max(-amount,Math.min(amount,target-b.velocity.x)));
     if(a.down && grounded){this.dropUntil=now+.3;b.setVelocityY(Math.max(b.velocity.y,130));}
     if(a.jump){
-      if(this.jumps===0&&now<this.coyoteUntil){this.jumps=1;this.cut=false;this.coyoteUntil=0;b.setVelocityY(-P.jumpSpeed);sfx('MOV-02');}
-      else if(this.jumps<2){this.jumps=2;this.cut=false;b.setVelocityY(-P.doubleJumpSpeed);sfx('MOV-03');} // off a ledge: only the double jump remains
+      if(this.jumps===0&&now<this.coyoteUntil){this.jumps=1;this.cut=false;this.coyoteUntil=0;b.setVelocityY(-P.jumpSpeed);this.jumpFx={x:b.x+b.width/2,y:b.bottom,t0:now,dj:false};sfx('MOV-02');}
+      else if(this.jumps<2){this.jumps=2;this.cut=false;b.setVelocityY(-P.doubleJumpSpeed);this.jumpFx={x:b.x+b.width/2,y:b.bottom,t0:now,dj:true};sfx('MOV-03');} // off a ledge: only the double jump remains
     }
     if(!a.jumpHeld && !this.cut && b.velocity.y<0) {b.setVelocityY(b.velocity.y*P.jumpCut);this.cut=true;}
     if(b.velocity.y>P.terminalSpeed)b.setVelocityY(P.terminalSpeed);

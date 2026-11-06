@@ -14,6 +14,7 @@ import {BadgeWorld} from '../badge/world';
 import {RespawnManager} from '../respawn/manager';
 import {EnemySystem} from '../enemy/system';
 import {levelArt} from '../assets/level-art';
+import {playerFx} from '../assets/player-fx';
 import level from '../level/data/level.json';
 import {sfx,hold,stopHeld,listen} from '../audio/sfx';
 export class GameplayScene extends Phaser.Scene {
@@ -31,14 +32,14 @@ export class GameplayScene extends Phaser.Scene {
   terrain!:TerrainSystem; cameraManager!:CameraManager;
   session!:GameplaySession;badges!:BadgeWorld;respawner!:RespawnManager;enemies!:EnemySystem;
   pickups:{id:string;kind:'laptop'|'ally';object:Phaser.GameObjects.Rectangle;image:Phaser.GameObjects.Image}[]=[];
-  goal!:Phaser.GameObjects.Rectangle;attackItem=ATTACK_ITEMS[0].src;shockUntil=0;
+  goal!:Phaser.GameObjects.Rectangle;attackItem=ATTACK_ITEMS[0].src;shockUntil=0;stompFx={x:0,y:0,t0:-9};
   menu=-1;lastMove=0;menuView!:Phaser.GameObjects.Text;menuMask!:Phaser.GameObjects.Rectangle;
   private frameTime=0;
   level=LEVEL;
   constructor() { super('Gameplay'); }
   create(data:{duration?:number;sessionId?:string;characterId?:string;attackItem?:string;photo?:string;tutorial?:boolean;flow?:GameplayStateMachine}={}) {
     const debug=new URLSearchParams(location.search).get('debug')==='1';
-    this.frameTime=performance.now();this.shockUntil=0;
+    this.frameTime=performance.now();this.shockUntil=0;this.stompFx={x:0,y:0,t0:-9};
     this.level=data.tutorial?TUTORIAL_LEVEL:LEVEL;
     this.attackItem=ATTACK_ITEMS.find(i=>i.src===data.attackItem)?.src??ATTACK_ITEMS[0].src;
     this.session=new GameplaySession(data.duration??P.timeTier,data.sessionId??(sessionStorage.sessionId ??= crypto.randomUUID()),data.tutorial);this.run=this.session.run;listen(this.session.events);
@@ -60,7 +61,7 @@ export class GameplayScene extends Phaser.Scene {
     if(data.tutorial)this.cameras.main.setViewport(290,140,620,240);
     this.respawner=new RespawnManager(this.terrain,this.level);
     this.badges=new BadgeWorld(this,this.session,this.player,this.terrain,this.level.badges);
-    this.enemies=new EnemySystem(this,this.session,this.player,this.level,cause=>this.takeDamage(cause),()=>this.controller.bounce(P.jumpSpeed*P.stompBounce));
+    this.enemies=new EnemySystem(this,this.session,this.player,this.level,cause=>this.takeDamage(cause),y=>{this.controller.bounce(P.jumpSpeed*P.stompBounce);this.stompFx={x:this.player.x,y,t0:this.run.elapsed};});
     this.pickups=this.level.powerups.map(p=>{
       const art=p.kind==='ally'?level.itemArt.ally:null,w=p.kind==='laptop'?2*T:T;
       const object=this.add.rectangle(p.x,p.y,w,T,p.kind==='ally'?0xb98cff:0x5ed5f1).setDepth(3).setAlpha(debug?.5:0);
@@ -69,7 +70,7 @@ export class GameplayScene extends Phaser.Scene {
       return{...p,object,image};
     });
     const g=this.level.goal;this.goal=this.add.rectangle(g.x,g.y,g.width,g.height,0x82ec7b).setAlpha(debug?.4:0);
-    levelArt(this,data.tutorial?TUTORIAL_CLIP:undefined);
+    levelArt(this,data.tutorial?TUTORIAL_CLIP:undefined);playerFx(this);
     document.querySelector('#result')!.textContent='';
     this.hud=this.add.text(16,14,'',{fontSize:'16px',color:'#ffffff'}).setScrollFactor(0).setDepth(100);
     this.hud.setVisible(!this.registry.get('station'));
@@ -160,7 +161,8 @@ export class GameplayScene extends Phaser.Scene {
       if(this.session.tutorial)this.cameras.main.setScroll(Math.max(0,this.player.x-200),Math.min(this.level.start.y-140,this.player.y-120));
       else this.cameraManager.update({x:this.player.x,top:this.body.top,bottom:this.body.bottom,vx:this.body.velocity.x,vy:this.body.velocity.y,grounded:this.body.blocked.down},dt,this.goalNear());
     });
-    this.presentation.update(this.shockUntil?'HURT':this.controller.state,this.controller.facing,this.run.elapsed,this.session.power.ally);
+    const pw=this.session.power,t=this.run.elapsed;
+    this.presentation.update(this.shockUntil?'HURT':this.controller.state,this.controller.facing,t,{ally:pw.ally?pw.allyUntil-t:0,since:t-pw.allyAt,hit:this.enemies.shieldHit,blink:!this.shockUntil&&t<this.session.damage.immuneUntil});
     // Station mode hides the Phaser HUD; skip re-rasterising its text every frame.
     if(this.hud.visible)this.hud.setText(`TEST ONLY / ${this.fixed.hz}Hz\n${this.run.phase} · Timer ${this.run.remaining.toFixed(1)}\nBadge ${this.session.badges.held} · Score ${this.session.score.total} · Combo ${this.session.combo.count} ×${this.session.combo.multiplier}\nItem ${this.session.power.armed?weaponMode(this.attackItem).tag??'ON':'none'} · Ally ${this.session.power.ally?Math.ceil(this.session.power.allyUntil-this.run.elapsed):'-'}`);
   }
