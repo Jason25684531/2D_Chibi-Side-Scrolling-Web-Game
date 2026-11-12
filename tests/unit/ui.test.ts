@@ -27,7 +27,7 @@ it('maps planning keys Z X C ↓ and keeps Confirm/Back',()=>{
   const input=new InputAdapter();input.codes.add('Enter');expect(input.sample().confirm).toBe(true);expect(input.sample().confirm).toBe(false);
   input.codes.clear();input.codes.add('Backspace');expect(input.sample().back).toBe(true);
   for(const [code,action] of [['KeyZ','jump'],['KeyX','dash'],['KeyC','throw'],['ArrowDown','down']] as const){const k=new InputAdapter();k.codes.add(code);expect(k.sample()[action]).toBe(true);}
-  const pad=new InputAdapter();expect(pad.sample({axes:[],buttons:[{pressed:true}]}).confirm).toBe(true);
+  const pad=new InputAdapter();expect(pad.sample({mapping:'standard',axes:[],buttons:[{pressed:false},{pressed:false},{pressed:false},{pressed:true}]}).confirm).toBe(true);
 });
 it('keeps the newest WALL_MAX players on the wall and lets the operator reset unreadable storage',()=>{
   const a=new MockStation(),run=(n:string)=>{a.enqueue(n);const s=new GameplaySession(100,a.current.sessionId);s.tick(100);a.save(s.finish('time-up')!);a.exit();};

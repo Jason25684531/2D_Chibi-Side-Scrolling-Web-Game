@@ -1,12 +1,13 @@
 import Phaser from 'phaser';
 import {GameplayStateMachine,type Flow} from '../core/state';
 import {InputAdapter,type Actions,type Pad} from '../input/adapter';
+import {activePad,profileFor,saveProfile,rebind,REBINDABLE} from '../input/gamepad';
 import type {GameplayScene} from '../scenes/gameplay';
 import type {GameplayResult} from '../core/session';
 import {TEST_PROFILE as P,ATTACK_ITEMS} from '../core/config';
 import {characterName,characterIds,pose} from '../assets/catalog';
 import {MockStation,titles,savedTier,saveTier} from './mock-station';
-import {avatar,button,panel,escape,focus,text,time,chip,statRow,titleTag,rankRow} from './components';
+import {avatar,button,panel,escape,focus,focusY,text,time,chip,statRow,titleTag,rankRow} from './components';
 import {readiness,readinessSteps,readyLabel,needsPhoto,look} from './readiness';
 import {openCamera,closeCamera,cameraError,capturePhoto,dress} from './camera';
 import './station.css';
@@ -15,6 +16,11 @@ import {sfx} from '../audio/sfx';
 /** Buttons that go back a step play UI-03 (sheet: 返回上一頁／取消／重拍); every other button plays UI-02. */
 const BACK=new Set(['prev','exit','close-ranking','records-back','retake']);
 const ATTRACT_IDLE=60000;
+// Controls panel (system menu → 按鍵設定). Names are the W3C standard positions, shown only for a standard-mapped pad.
+const CONTROL_LABELS:Record<typeof REBINDABLE[number],string>={jump:'跳躍／選單確認',dash:'衝刺',throw:'投擲',confirm:'開始遊戲（訓練場）',back:'返回'};
+const PAD_NAMES=['✕','○','□','△','L1','R1','L2','R2','SHARE','OPTIONS','L3','R3'];
+// Never captured while binding: directions, OPTIONS, and the current back button (it cancels instead of silently swapping).
+const FIXED=['home','pause','left','right','up','down','back'] as const;
 const NAV='<span><kbd>← →</kbd>選擇</span><span><kbd>Z / ENTER</kbd>確認</span><span><kbd>BACKSPACE</kbd>返回</span><span><kbd>H</kbd>選單</span>';
 const HINTS:Record<string,string>={P0:'<span><kbd>Z / ENTER</kbd>PLAY</span><span><kbd>H</kbd>系統選單</span>',P3:'<span><kbd>← →</kbd>移動</span><span><kbd>Z</kbd>跳躍</span><span><kbd>X</kbd>衝刺</span><span><kbd>C</kbd>投擲</span><span><kbd>ENTER</kbd>開始遊戲</span><span><kbd>H</kbd>選單</span>'};
 // Text wordmark only; the slashes are decoration, not the ROG eye (DESIGN.md §8.5).
@@ -24,12 +30,15 @@ const titleLine=(r:GameplayResult)=>{const t=titles(r);return t.length?t.slice(0
 
 export class StationUI {
   flow=new GameplayStateMachine();adapter=new MockStation();inputAdapter=new InputAdapter();
-  tier=typeof window==='undefined'?P.timeTier:savedTier();entered=performance.now();countdownAt=0;menu=false;lastMove=0;testPad:Pad|null=null;
+  tier=typeof window==='undefined'?P.timeTier:savedTier();entered=performance.now();countdownAt=0;menu=false;testPad:Pad|null=null;
   root:HTMLElement;ui:HTMLElement;progress=new Set<string>();private previous=performance.now();
   result:GameplayResult|null=null;step=0;idleSince=performance.now();attract=false;
   boardOpen=false;rankPage=0;private returnFocus:string|undefined;
   /** P0 menu → records panel; armed = the delete/reset action waiting for its confirming second press. */
   admin=false;armed='';
+  /** System menu → controls panel; binding = the action waiting for the next pad button. */
+  private lastFocus:string|undefined;
+  controls=false;binding:''|typeof REBINDABLE[number]='';private bindPrev:boolean[]|null=null;private bindAt=0;
   /** Live camera for the P1 photo step; render() opens and closes it. */
   private stream:Promise<MediaStream>|null=null;camError='';
   constructor(readonly game:Phaser.Game){
@@ -42,6 +51,7 @@ export class StationUI {
     this.ui.addEventListener('pointerdown',()=>this.wake());
     this.ui.addEventListener('input',event=>{const input=event.target as HTMLInputElement;if(input.id==='nickname'&&this.adapter.current)this.adapter.current.nickname=input.value;});
     this.ui.addEventListener('focusin',event=>{
+      const action=(event.target as HTMLElement).dataset?.action;if(action)this.lastFocus=action;
       if(event.target instanceof HTMLInputElement)for(const a of [this.inputAdapter,this.scene.inputAdapter]){a?.codes.clear();a?.previous.clear();a?.clear();}
     });
     this.ui.addEventListener('keydown',event=>{
@@ -58,7 +68,9 @@ export class StationUI {
     this.render();(window as any).__station=this;
   }
   get scene(){return this.game.scene.getScene('Gameplay') as GameplayScene;}
-  go(next:Flow){if(next==='P4')sfx('ANN-02');this.admin=false;this.armed='';this.flow.transition(next);this.entered=this.idleSince=performance.now();this.countdownAt=0;this.boardOpen=false;this.rankPage=0;this.attract=false;if(next==='P1')this.step=0;this.render();}
+  /** The pad feeding whichever adapter is live (the scene's during a run). */
+  get pad(){return (this.game.scene.isActive('Gameplay')?this.scene.testPad:this.testPad)??activePad();}
+  go(next:Flow){if(next==='P4')sfx('ANN-02');this.admin=false;this.armed='';this.controls=false;this.binding='';this.flow.transition(next);this.entered=this.idleSince=performance.now();this.countdownAt=0;this.boardOpen=false;this.rankPage=0;this.attract=false;if(next==='P1')this.step=0;this.render();}
   start(tutorial=false){
     this.inputAdapter.dispose();this.progress.clear();
     const c=this.adapter.current!,data={duration:this.tier,sessionId:c.sessionId,characterId:c.characterId,attackItem:c.attackItem,photo:c.custom?c.photo:undefined,tutorial,flow:this.flow};
@@ -116,25 +128,36 @@ export class StationUI {
       if(action==='clear-records')this.adapter.clear();else this.adapter.remove(action.slice(7));
       this.armed='';this.render();focus(this.ui.querySelector<HTMLElement>('.modal.screen')!,0,'records-back');return;
     }
+    if(this.menu&&(action==='controls'||action==='controls-back')){this.controls=action==='controls';this.binding='';this.render();focus(this.ui.querySelector<HTMLElement>('.modal.screen')!,0,this.controls?'bind-jump':'controls');return;}
+    if(this.controls&&action.startsWith('bind-')){this.binding=action.slice(5) as typeof REBINDABLE[number];this.bindPrev=null;this.bindAt=performance.now();this.render();focus(this.ui.querySelector<HTMLElement>('.modal.screen')!,0,action);return;}
+    if(this.controls&&action==='controls-reset'){const id=this.pad?.id;if(id!==undefined)this.saveControls(id,null);this.render();focus(this.ui.querySelector<HTMLElement>('.modal.screen')!,0,action);return;}
     if(action==='settings-time'&&this.menu&&this.flow.flow==='P0'){this.tier=P.timeTiers[(P.timeTiers.indexOf(this.tier)+1)%P.timeTiers.length];saveTier(this.tier);this.rankPage=0;this.render();focus(this.ui,0,action);}
     if(action==='replay'&&this.adapter.replayEnabled&&this.flow.flow==='P7'){this.countdownAt=performance.now();sfx('ANN-01');this.render();}
   }
+  /** Persist, then latch both adapters: the button just pressed now maps to another action and must not fire as that action. */
+  saveControls(id:string,profile:Parameters<typeof saveProfile>[1]){
+    try{saveProfile(id,profile);}catch(error){console.warn('[controls] profile not saved',error);}
+    this.inputAdapter.latch=true;if(this.scene?.inputAdapter)this.scene.inputAdapter.latch=true;
+  }
   input(a:Actions){
     if(document.activeElement instanceof HTMLInputElement)return true;
+    // Waiting for a button: nothing else may act on it. OPTIONS (home) cancels; update() captures the press.
+    if(this.binding){if(a.home||a.pause||a.back){sfx('UI-03');this.binding='';this.render();focus(this.ui.querySelector<HTMLElement>('.modal.screen')!,0,'bind-jump');}return true;}
     if(this.flow.flow==='P0'&&(a.move||a.jump||a.confirm||a.back||a.dash||a.throw||a.home||a.pause)&&this.wake())return true;
     if(a.back&&this.admin){sfx('UI-03');this.act('records-back');return true;}
-    if(a.home||a.pause){sfx('UI-04');this.admin=false;this.armed='';if(!this.menu)this.returnFocus=(document.activeElement as HTMLElement)?.dataset.action;this.menu=!this.menu;if(this.menu)this.scene.run?.pause();else this.scene.run?.resume();this.scene.fixed?.reset();this.render();if(!this.menu)focus(this.ui,0,this.returnFocus);return true;}
+    if(a.back&&this.controls&&this.menu){sfx('UI-03');this.act('controls-back');return true;}
+    if(a.home||a.pause){sfx('UI-04');this.admin=false;this.armed='';this.controls=false;if(!this.menu)this.returnFocus=(document.activeElement as HTMLElement)?.dataset.action;this.menu=!this.menu;if(this.menu)this.scene.run?.pause();else this.scene.run?.resume();this.scene.fixed?.reset();this.render();if(!this.menu)focus(this.ui,0,this.returnFocus);return true;}
     if(a.back&&this.menu){sfx('UI-03');this.act('continue');return true;}
     if(a.back&&this.boardOpen){sfx('UI-03');this.act('close-ranking');return true;}
     if(this.flow.flow==='P7'&&this.countdownAt&&!this.menu)return true;
     if(a.confirm&&this.flow.flow==='P3'&&!this.menu)this.act('start-game');
     const gameplay=(this.flow.flow==='P3'||this.flow.flow==='P4')&&!this.menu;
     if(!gameplay){
-      if(a.move&&(a.movePressed||a.move!==this.lastMove)){sfx('UI-01');focus(this.ui.querySelector<HTMLElement>('.modal.screen')??this.ui,a.move);}
+      if(a.nav||a.navY){sfx('UI-01');const root=this.ui.querySelector<HTMLElement>('.modal.screen')??this.ui;if(a.nav)focus(root,a.nav);else focusY(root,a.navY!);}
       if((a.confirm||a.jump)&&this.ui.contains(document.activeElement))(document.activeElement as HTMLButtonElement)?.click();
       if(a.back&&this.flow.flow==='P1'&&!this.menu){sfx('UI-03');this.act('prev');}
     }
-    this.lastMove=a.move;return !gameplay;
+    return !gameplay;
   }
   lessons(){
     const l=this.scene?.level,has=(k:string)=>!!l&&(k==='laptop'?l.powerups.some(p=>p.kind==='laptop'):k==='enemy'?l.enemies.length>0:k==='badge'?l.badges.length>0:l.terrain.some(t=>t.kind==='bounce'));
@@ -145,7 +168,18 @@ export class StationUI {
   update(){
     const now=performance.now(),delta=now-this.previous;this.previous=now;
     if(this.menu){this.entered+=delta;if(this.countdownAt)this.countdownAt+=delta;}
-    if(!this.game.scene.isActive('Gameplay'))this.input(this.inputAdapter.sample(this.testPad??Array.from(navigator.getGamepads?.()??[]).find(p=>p?.connected)));
+    // Clicking empty space, or clicking back in from another window, drops DOM focus. A stick cannot click it back and
+    // confirm acts on the focused button, so put focus back (inside the open panel) whenever a menu screen has none.
+    if(this.menu||!['P3','P4'].includes(this.flow.flow)){const root=this.ui.querySelector<HTMLElement>('.modal.screen')??this.ui;if(!root.contains(document.activeElement))focus(root,0,this.lastFocus);}
+    if(this.binding){
+      // The first pad button that goes down after listening started (the confirm press is still held on frame one) is bound.
+      const pad=this.pad,p=pad?profileFor(pad):null,pressed=pad?.buttons.map(b=>b.pressed)??[],action=this.binding;
+      const hit=this.bindPrev?pressed.findIndex((on,i)=>on&&!this.bindPrev![i]&&!FIXED.some(f=>p?.buttons[f]?.includes(i))):-1;
+      this.bindPrev=pressed;
+      if(p&&pad?.id!==undefined&&hit>=0){this.saveControls(pad.id,rebind(p,action,hit));sfx('UI-02');this.binding='';this.render();focus(this.ui.querySelector<HTMLElement>('.modal.screen')!,0,'bind-'+action);}
+      else if(!p||now-this.bindAt>8000){this.binding='';this.render();}
+    }
+    if(!this.game.scene.isActive('Gameplay'))this.input(this.inputAdapter.sample(this.testPad??activePad()));
     if(this.flow.flow==='P0'&&this.adapter.current)this.go('P1');
     if(this.flow.flow==='P0'){
       if(!this.attract&&!this.menu&&now-this.idleSince>=ATTRACT_IDLE){this.attract=true;this.render();}
@@ -250,7 +284,11 @@ export class StationUI {
       const row=(r:typeof rows[number],i:number)=>{const id='delete-'+escape(r.runId),on=this.armed==='delete-'+r.runId;return button(id,on?'再按一次刪除':`${String(i+1).padStart(2,'0')}　${escape(r.nickname)}`,on?'PRESS AGAIN TO DELETE':`${r.score.toLocaleString()} 分 · ${day(r)}`,false,on?'primary':'');};
       body+=`<div class="modal screen" role="dialog" aria-modal="true" aria-label="排行榜管理"><section class="panel menu records"><h2>排行榜管理<small>RECORDS · ${this.tier} 秒 · ${rows.length} 筆 · 本機永久保存</small></h2><div class="record-list">${rows.map(row).join('')||'<p class="empty-state">尚無成績</p>'}</div>${button('clear-records',this.armed==='clear-records'?'再按一次全部清除':'重置全部紀錄',this.armed==='clear-records'?'PRESS AGAIN TO RESET':'RESET ALL TIERS',false,this.armed==='clear-records'?'primary':'','retry')}${button('records-back','返回','BACK',false,'','exit')}</section></div>`;
     }
-    else if(this.menu)body+=`<div class="modal screen" role="dialog" aria-modal="true" aria-label="系統選單"><section class="panel menu"><h2>系統選單<small>SYSTEM MENU</small></h2>${['P3','P4','P5','P6','P7'].includes(this.flow.flow)?button('continue','繼續','CONTINUE',false,'primary','next'):''}${this.flow.flow==='P4'?button('restart','重新開始','RESTART',false,'','retry'):''}${button('exit','回到主畫面','HOME',false,'','home')}${this.flow.flow==='P0'?button('settings-replay',`再挑戰：${this.adapter.replayEnabled?'開啟':'關閉'}`,'REPLAY SETTING',false,'','list')+button('settings-time',`遊戲時間：${this.tier} 秒`,'TIME SETTING',false,'','clock')+button('records','排行榜管理','RECORDS',false,'','list'):''}</section></div>`;
+    else if(this.menu&&this.controls){
+      const pad=this.pad,p=pad?profileFor(pad):null,name=(i:number)=>(pad?.mapping==='standard'&&PAD_NAMES[i])||`按鍵 ${i}`;
+      body+=`<div class="modal screen" role="dialog" aria-modal="true" aria-label="按鍵設定"><section class="panel menu"><h2>按鍵設定<small>CONTROLS · 搖桿上下選動作 → 確認 → 按下要用的按鍵</small></h2>${p?REBINDABLE.map(a=>this.binding===a?button('bind-'+a,'請按下按鍵…','PRESS A BUTTON · 返回／OPTIONS 取消',false,'primary'):button('bind-'+a,CONTROL_LABELS[a],p.buttons[a]?.map(name).join(' / ')||'未設定')).join(''):'<p class="empty-state">未偵測到搖桿<br><small>請先按一下搖桿上的任一按鍵</small></p>'}${button('controls-reset','恢復預設','RESET TO DEFAULT',!p,'','retry')}${button('controls-back','返回','BACK',false,'','exit')}</section></div>`;
+    }
+    else if(this.menu)body+=`<div class="modal screen" role="dialog" aria-modal="true" aria-label="系統選單"><section class="panel menu"><h2>系統選單<small>SYSTEM MENU</small></h2>${['P3','P4','P5','P6','P7'].includes(this.flow.flow)?button('continue','繼續','CONTINUE',false,'primary','next'):''}${this.flow.flow==='P4'?button('restart','重新開始','RESTART',false,'','retry'):''}${button('exit','回到主畫面','HOME',false,'','home')}${button('controls','按鍵設定','CONTROLS',false,'','list')}${this.flow.flow==='P0'?button('settings-replay',`再挑戰：${this.adapter.replayEnabled?'開啟':'關閉'}`,'REPLAY SETTING',false,'','list')+button('settings-time',`遊戲時間：${this.tier} 秒`,'TIME SETTING',false,'','clock')+button('records','排行榜管理','RECORDS',false,'','list'):''}</section></div>`;
     this.ui.innerHTML=body;this.syncCamera();
     // Gameplay screens keep DOM focus off buttons so Z/Enter reach the game, not a focused START.
     if(this.menu||!['P3','P4'].includes(this.flow.flow))focus(this.ui.querySelector<HTMLElement>('.modal.screen')??this.ui,0,this.menu?'continue':this.flow.flow==='P1'?'ready':this.flow.flow==='P5'?'exit':this.flow.flow==='P6'?'result':this.flow.flow==='P7'?'exit':undefined);

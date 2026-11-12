@@ -3,6 +3,7 @@ import { TEST_PROFILE as P, TILE as T, ATTACK_ITEMS, weaponMode } from '../core/
 import { FixedStepController } from '../core/fixed-step';
 import { GameplayStateMachine, RunStateManager } from '../core/state';
 import { InputAdapter, type Pad } from '../input/adapter';
+import { activePad } from '../input/gamepad';
 import {PlayerController} from '../player/controller';
 import {CharacterView} from '../assets/characters';
 import {stepPhysics} from '../physics/step';
@@ -47,6 +48,7 @@ export class GameplayScene extends Phaser.Scene {
     this.fixed=new FixedStepController(debug&&Number(new URLSearchParams(location.search).get('hz')) === 60 ? 60 : 24);
     this.physics.world.fixedStep=false;
     this.inputAdapter=new InputAdapter(P.deadzone); this.inputAdapter.attach();
+    this.inputAdapter.latch=true; // the pad button that confirmed Start/Restart is still down: it must not also jump
     validateLevel(this.level);
     this.physics.world.setBounds(0,0,this.level.width,this.level.height,true,true,true,false);
     this.add.rectangle(this.level.width/2,this.level.height/2,this.level.width,this.level.height,0x05060a).setDepth(-100);
@@ -125,10 +127,11 @@ export class GameplayScene extends Phaser.Scene {
     // Before the station/menu early returns: pause, Result and menus must silence these. SYS-01 is 9.0 s, so it ends at 0.
     const live=this.run.phase==='running',timed=live&&!this.session.tutorial;
     hold('ENV-04',+timed);hold('PWR-07',+(live&&this.session.power.ally));hold('ENV-02',live?this.goalNear():0);hold('SYS-01',+(timed&&this.run.remaining>0&&this.run.remaining<=9));
-    const pad=this.testPad ?? Array.from(navigator.getGamepads?.() ?? []).find(p=>p?.connected);
+    const pad=this.testPad ?? activePad();
     const a=this.inputAdapter.sample(pad);
     const station=this.registry.get('station');
     if(station?.input(a))return;
+    this.inputAdapter.navAt=Infinity; // a direction held through gameplay must not start scrolling the next menu
     const inMenu=this.updateMenu(a);this.lastMove=a.move;
     this.menuMask.setVisible(this.menu>=0);this.menuView.setText(this.menu<0?'':this.menuOptions().map((o,i)=>i===this.menu?`▶ ${o} ◀`:o).join('\n\n'));
     if(inMenu) return;

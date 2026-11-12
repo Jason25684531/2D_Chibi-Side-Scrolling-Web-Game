@@ -7,7 +7,7 @@ test('D1: real Phaser keyboard, simulated gamepad, pause, home and restart',asyn
   expect(await page.evaluate(()=>(window as any).__gameplay.player.x)).toBeGreaterThan(x+25);
   await page.click('#pause');const remaining=await page.evaluate(()=>(window as any).__gameplay.run.remaining);
   await page.waitForTimeout(250);expect(await page.evaluate(()=>(window as any).__gameplay.run.remaining)).toBe(remaining);
-  await page.click('#pause');await page.evaluate(()=>{(window as any).__gameplay.testPad={axes:[-1],buttons:[]};});
+  await page.click('#pause');await page.evaluate(()=>{(window as any).__gameplay.testPad={mapping:'standard',axes:[-1],buttons:[]};});
   await page.waitForTimeout(250);await page.evaluate(()=>{(window as any).__gameplay.testPad=null;});
   const old=await page.evaluate(()=>(window as any).__gameplay.run.runId);await page.click('#home');
   await page.waitForFunction(()=>!(window as any).__game.scene.isActive('Gameplay'));

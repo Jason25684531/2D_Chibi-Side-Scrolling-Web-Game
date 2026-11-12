@@ -64,7 +64,7 @@ test('M6 full keyboard Goal flow, screenshots, result wait, replay resets and qu
   expect(replay).toEqual({id:expect.any(String),tier:120,score:0,badges:0,ledger:0});expect(replay.id).not.toBe(r.runId);
   await page.keyboard.press('KeyH');await expect(page.locator('.modal')).toBeVisible();
   const paused=await page.evaluate(()=>(window as any).__gameplay.run.remaining);await page.waitForTimeout(200);expect(await page.evaluate(()=>(window as any).__gameplay.run.remaining)).toBe(paused);
-  await page.keyboard.press('ArrowLeft');await expect(page.locator('.modal [data-action=exit]')).toBeFocused();await page.keyboard.press('Enter');
+  await page.keyboard.press('ArrowLeft');await expect(page.locator('.modal [data-action=controls]')).toBeFocused();await page.keyboard.press('ArrowLeft');await expect(page.locator('.modal [data-action=exit]')).toBeFocused();await page.keyboard.press('Enter');
   await expect(page.locator('[data-screen=P0]')).toBeVisible();expect(await page.evaluate(()=>(window as any).__station.adapter.queue.length)).toBe(0);
   await expect(page.locator('[data-screen=P0] .wall')).toBeVisible();await expect(page.getByRole('heading',{name:'TOP 20 / 120 秒'})).toBeVisible();
   await page.screenshot({path:'docs/evidence/uiux-screens/P0-ranking.png'});
@@ -77,7 +77,7 @@ test('Time Up presentation, generating readiness, simulated pad through three st
   await expect(page.locator('[data-screen=P1]')).toBeVisible();await expect(page.locator('[data-action=ready]')).toBeDisabled();
   await page.keyboard.press('Enter');await expect(page.locator('[data-screen=P1]')).toBeVisible();
   await page.evaluate(()=>{(window as any).__station.adapter.current.assetState='fallback';});await expect(page.locator('[data-action=ready]')).toBeFocused();
-  const press=async(index:number)=>{await page.evaluate(i=>{(window as any).__station.testPad={axes:[0],buttons:Array.from({length:16},(_,j)=>({pressed:j===i}))};},index);await page.waitForTimeout(70);await page.evaluate(()=>{(window as any).__station.testPad=null;});await page.waitForTimeout(70);};
+  const press=async(index:number)=>{await page.evaluate(i=>{(window as any).__station.testPad={mapping:'standard',axes:[0],buttons:Array.from({length:16},(_,j)=>({pressed:j===i}))};},index);await page.waitForTimeout(70);await page.evaluate(()=>{(window as any).__station.testPad=null;});await page.waitForTimeout(70);};
   await press(0);await expect(page.locator('.item-card')).toHaveCount(5);await expect(page.locator('[data-action=ready]')).toBeFocused();await press(0);
   await expect(page.locator('#nickname')).toBeVisible();await press(0);
   await page.waitForFunction(()=>(window as any).__gameplay?.session?.tutorial);await page.keyboard.press('Enter');

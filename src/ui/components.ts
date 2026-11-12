@@ -29,4 +29,13 @@ export function focus(root:HTMLElement,direction=0,preferred?:string){
   const current=buttons.indexOf(document.activeElement as HTMLButtonElement);
   (buttons.find(b=>b.dataset.action===preferred)??buttons[(Math.max(0,current)+direction+buttons.length)%buttons.length])?.focus();
 }
+/** Stick up/down: the nearest row of buttons in that direction, then the horizontally closest one in it. No row there: stay. */
+export function focusY(root:HTMLElement,direction:number){
+  const current=document.activeElement as HTMLElement;
+  if(!root.contains(current))return focus(root);
+  const c=current.getBoundingClientRect(),x=c.left+c.width/2;
+  const rows=Array.from(root.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')).map(b=>{const r=b.getBoundingClientRect();return {b,size:r.width,gap:direction>0?r.top-c.bottom:c.top-r.bottom,dx:Math.abs(r.left+r.width/2-x)};}).filter(o=>o.size&&o.gap>-4);
+  const nearest=Math.min(...rows.map(o=>o.gap));
+  rows.filter(o=>o.gap<nearest+24).sort((p,q)=>p.dx-q.dx)[0]?.b.focus(); // ponytail: 24 px row tolerance, tune if a layout staggers its rows
+}
 export function text(root:HTMLElement,id:string,value:unknown){const node=root.querySelector('#'+id);if(node&&node.textContent!==String(value))node.textContent=String(value);}

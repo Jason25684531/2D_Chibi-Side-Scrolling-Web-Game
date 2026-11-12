@@ -39,7 +39,7 @@ export async function driveRoute(page:Page,timeout=80000){
         if(!p.grounded&&s.controller.jumps===1&&p.vy>0&&![0,1,2,3].some(k=>stand(c,r+k)))jump=true; // double jump over a deep gap
       }
       const press=jump&&!held;held=hop?false:jump||(held&&p.vy<0);
-      s.testPad={axes:[move,down?1:0],buttons:Array.from({length:16},(_,k)=>({pressed:k===1?press||held:false}))};
+      s.testPad={mapping:'standard',axes:[move,down?1:0],buttons:Array.from({length:16},(_,k)=>({pressed:k===0?press||held:false}))};
     };
     s.events.on('preupdate',bot);(window as any).__route=()=>({step:region,x:s.body.center.x/T,row:s.body.bottom/T});
   });
