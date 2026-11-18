@@ -1,15 +1,15 @@
 import assets from '../level/data/assets.json';
-import charA from '../level/data/char-a.json';
-import charB from '../level/data/char-b.json';
+import skins from '../level/data/skins.json';
+import {ROLES,parseManifest,type CharacterSkin,type RoleCode} from '../comfy/skin';
 // Phaser-free lookups shared by the DOM UI and the scene.
 /** Staged URL for a package path relative to game/ (see tools/stage-assets.py). */
 export const asset=(key:string)=>(assets as Record<string,{url:string}>)[key]?.url??'';
-export const CHARACTERS={a:charA,b:charB};
-export const characterIds=['a','b'] as const;
-export const characterName=(id?:string)=>id==='b'?'S2AM':'S3WW';
-/** Character strings live here only; swap when planning supplies Chinese names. */
-export const characterRole=(id?:string)=>id==='b'?'角色 B · CHARACTER B':'角色 A · CHARACTER A';
-/** Custom avatar face circle per body and frame: centre x/y and diameter as fractions of the pose image. Calibration knobs. */
-export const FACE={a:{idle1:{x:.5,y:.39,d:.26},attack1:{x:.63,y:.42,d:.24}},b:{idle1:{x:.51,y:.33,d:.28},attack1:{x:.48,y:.35,d:.26}}};
-/** One existing frame: idle1 for cards/avatars, attack1 for hero, jump for GOAL (DESIGN.md decision 6). */
-export const pose=(id?:string,frame:keyof typeof charA.frames='idle1')=>asset('chars/'+CHARACTERS[id==='b'?'b':'a'].frames[frame]);
+export const characterIds=ROLES;
+/** The four Taskforce presets, staged from assest/ by tools/stage-assets.py. */
+export const PRESETS=Object.fromEntries(ROLES.map(r=>[r,{...parseManifest(skins[r].manifest,r,u=>u),id:r,custom:false,poses:skins[r].poses}])) as Record<RoleCode,CharacterSkin>;
+/** Feet line, body height and horizontal centre as fractions of a sheet cell. Custom skins reuse their role's (same alignment reference). */
+export const CALIBRATION=Object.fromEntries(ROLES.map(r=>[r,{foot:skins[r].foot,body:skins[r].body,cx:skins[r].cx}])) as Record<RoleCode,{foot:number;body:number;cx:number}>;
+/** Records written before the Taskforce roster stored a / b. */
+export const roleOf=(id?:string):RoleCode=>id==='b'?'S2AM':ROLES.includes(id as RoleCode)?id as RoleCode:'S3WW';
+export const characterName=(id?:string)=>roleOf(id);
+export const pose=(id?:string,frame:keyof CharacterSkin['poses']='idle')=>PRESETS[roleOf(id)].poses[frame];

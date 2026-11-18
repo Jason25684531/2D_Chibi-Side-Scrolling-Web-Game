@@ -42,9 +42,11 @@ test('D5: time-up locks result and rejects late score/pickup/goal',async({page})
  const r=await page.evaluate(()=>{const s=(window as any).__gameplay;s.session.credit('late');s.session.pickup('late');s.session.finish('goal');return s.session.result;});
  expect(r.remainingTime).toBe(0);expect(r.scoreBreakdown.goal).toBe(0);expect(r.scoreBreakdown.noDrop).toBe(0);
 });
-test('package character frames keep the 0.75x2 cell body for both characters',async({page})=>{
+test('every Taskforce preset stands on the 0.75x2 cell body with its feet on the box bottom',async({page})=>{
  await page.goto('/?debug=1');await page.waitForFunction(()=>!!(window as any).__gameplay?.presentation?.sprite);
- await page.selectOption('#character','b');await page.click('#start');await page.waitForTimeout(200);
- expect(await page.evaluate(()=>{const s=(window as any).__gameplay;return{texture:s.presentation.sprite.texture.key,width:s.body.width,height:s.body.height,drawn:Math.round(s.presentation.sprite.displayHeight),enemy:s.enemies.enemies[0].sprite.texture.key};})).toEqual({texture:'chars/S2AM-1(待機微動).png',width:24,height:64,drawn:80,enemy:'monsters/眼魔 BEHOLDER_0.png'});
+ for(const role of ['S2AM','S3WW','S1WM','S2WW']){
+  await page.selectOption('#character',role);await page.click('#start');await page.waitForTimeout(200);
+  expect(await page.evaluate(()=>{const s=(window as any).__gameplay,p=s.presentation.sprite,h=Math.round(p.displayHeight);return{texture:p.texture.key,width:s.body.width,height:s.body.height,feet:Math.round(p.y-(s.player.y+s.player.displayHeight/2)),tall:h>=80&&h<=100,enemy:s.enemies.enemies[0].sprite.texture.key};})).toEqual({texture:role+'/idle',width:24,height:64,feet:0,tall:true,enemy:'monsters/眼魔 BEHOLDER_0.png'});
+ }
  expect(await page.evaluate(()=>(window as any).__gameplay.controller.constructor.name)).toBe('PlayerController');
 });

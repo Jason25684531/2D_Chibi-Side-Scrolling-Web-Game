@@ -1,0 +1,258 @@
+{
+ "S2AM": {
+  "manifest": {
+   "schema": "taskforce_2028_sprite_manifest.v1",
+   "role_code": "S2AM",
+   "actions": [
+    {
+     "id": "attack",
+     "rows": 2,
+     "cols": 2,
+     "frame_count": 2,
+     "fps": 8,
+     "sprite_sheet": "/assets/skins/S2AM/attack.png"
+    },
+    {
+     "id": "djump",
+     "rows": 2,
+     "cols": 2,
+     "frame_count": 1,
+     "fps": 8,
+     "sprite_sheet": "/assets/skins/S2AM/djump.png"
+    },
+    {
+     "id": "fall",
+     "rows": 2,
+     "cols": 2,
+     "frame_count": 1,
+     "fps": 8,
+     "sprite_sheet": "/assets/skins/S2AM/fall.png"
+    },
+    {
+     "id": "idle",
+     "rows": 2,
+     "cols": 2,
+     "frame_count": 2,
+     "fps": 8,
+     "sprite_sheet": "/assets/skins/S2AM/idle.png"
+    },
+    {
+     "id": "jump",
+     "rows": 2,
+     "cols": 2,
+     "frame_count": 1,
+     "fps": 8,
+     "sprite_sheet": "/assets/skins/S2AM/jump.png"
+    },
+    {
+     "id": "run",
+     "rows": 2,
+     "cols": 2,
+     "frame_count": 2,
+     "fps": 8,
+     "sprite_sheet": "/assets/skins/S2AM/run.png"
+    }
+   ]
+  },
+  "foot": 0.9004,
+  "body": 0.7754,
+  "cx": 0.5015,
+  "poses": {
+   "idle": "/assets/skins/S2AM/pose-idle.png",
+   "attack": "/assets/skins/S2AM/pose-attack.png",
+   "jump": "/assets/skins/S2AM/pose-jump.png"
+  }
+ },
+ "S3WW": {
+  "manifest": {
+   "schema": "taskforce_2028_sprite_manifest.v1",
+   "role_code": "S3WW",
+   "actions": [
+    {
+     "id": "attack",
+     "rows": 2,
+     "cols": 2,
+     "frame_count": 2,
+     "fps": 8,
+     "sprite_sheet": "/assets/skins/S3WW/attack.png"
+    },
+    {
+     "id": "djump",
+     "rows": 2,
+     "cols": 2,
+     "frame_count": 1,
+     "fps": 8,
+     "sprite_sheet": "/assets/skins/S3WW/djump.png"
+    },
+    {
+     "id": "fall",
+     "rows": 2,
+     "cols": 2,
+     "frame_count": 1,
+     "fps": 8,
+     "sprite_sheet": "/assets/skins/S3WW/fall.png"
+    },
+    {
+     "id": "idle",
+     "rows": 2,
+     "cols": 2,
+     "frame_count": 2,
+     "fps": 8,
+     "sprite_sheet": "/assets/skins/S3WW/idle.png"
+    },
+    {
+     "id": "jump",
+     "rows": 2,
+     "cols": 2,
+     "frame_count": 1,
+     "fps": 8,
+     "sprite_sheet": "/assets/skins/S3WW/jump.png"
+    },
+    {
+     "id": "run",
+     "rows": 2,
+     "cols": 2,
+     "frame_count": 2,
+     "fps": 8,
+     "sprite_sheet": "/assets/skins/S3WW/run.png"
+    }
+   ]
+  },
+  "foot": 0.8994,
+  "body": 0.7852,
+  "cx": 0.5005,
+  "poses": {
+   "idle": "/assets/skins/S3WW/pose-idle.png",
+   "attack": "/assets/skins/S3WW/pose-attack.png",
+   "jump": "/assets/skins/S3WW/pose-jump.png"
+  }
+ },
+ "S1WM": {
+  "manifest": {
+   "schema": "taskforce_2028_sprite_manifest.v1",
+   "role_code": "S1WM",
+   "actions": [
+    {
+     "id": "attack",
+     "rows": 2,
+     "cols": 2,
+     "frame_count": 2,
+     "fps": 8,
+     "sprite_sheet": "/assets/skins/S1WM/attack.png"
+    },
+    {
+     "id": "djump",
+     "rows": 2,
+     "cols": 2,
+     "frame_count": 1,
+     "fps": 8,
+     "sprite_sheet": "/assets/skins/S1WM/djump.png"
+    },
+    {
+     "id": "fall",
+     "rows": 2,
+     "cols": 2,
+     "frame_count": 1,
+     "fps": 8,
+     "sprite_sheet": "/assets/skins/S1WM/fall.png"
+    },
+    {
+     "id": "idle",
+     "rows": 2,
+     "cols": 2,
+     "frame_count": 2,
+     "fps": 8,
+     "sprite_sheet": "/assets/skins/S1WM/idle.png"
+    },
+    {
+     "id": "jump",
+     "rows": 2,
+     "cols": 2,
+     "frame_count": 1,
+     "fps": 8,
+     "sprite_sheet": "/assets/skins/S1WM/jump.png"
+    },
+    {
+     "id": "run",
+     "rows": 2,
+     "cols": 2,
+     "frame_count": 2,
+     "fps": 8,
+     "sprite_sheet": "/assets/skins/S1WM/run.png"
+    }
+   ]
+  },
+  "foot": 0.8994,
+  "body": 0.7998,
+  "cx": 0.5029,
+  "poses": {
+   "idle": "/assets/skins/S1WM/pose-idle.png",
+   "attack": "/assets/skins/S1WM/pose-attack.png",
+   "jump": "/assets/skins/S1WM/pose-jump.png"
+  }
+ },
+ "S2WW": {
+  "manifest": {
+   "schema": "taskforce_2028_sprite_manifest.v1",
+   "role_code": "S2WW",
+   "actions": [
+    {
+     "id": "attack",
+     "rows": 2,
+     "cols": 2,
+     "frame_count": 2,
+     "fps": 8,
+     "sprite_sheet": "/assets/skins/S2WW/attack.png"
+    },
+    {
+     "id": "djump",
+     "rows": 2,
+     "cols": 2,
+     "frame_count": 1,
+     "fps": 8,
+     "sprite_sheet": "/assets/skins/S2WW/djump.png"
+    },
+    {
+     "id": "fall",
+     "rows": 2,
+     "cols": 2,
+     "frame_count": 1,
+     "fps": 8,
+     "sprite_sheet": "/assets/skins/S2WW/fall.png"
+    },
+    {
+     "id": "idle",
+     "rows": 2,
+     "cols": 2,
+     "frame_count": 2,
+     "fps": 8,
+     "sprite_sheet": "/assets/skins/S2WW/idle.png"
+    },
+    {
+     "id": "jump",
+     "rows": 2,
+     "cols": 2,
+     "frame_count": 1,
+     "fps": 8,
+     "sprite_sheet": "/assets/skins/S2WW/jump.png"
+    },
+    {
+     "id": "run",
+     "rows": 2,
+     "cols": 2,
+     "frame_count": 2,
+     "fps": 8,
+     "sprite_sheet": "/assets/skins/S2WW/run.png"
+    }
+   ]
+  },
+  "foot": 0.876,
+  "body": 0.7764,
+  "cx": 0.4941,
+  "poses": {
+   "idle": "/assets/skins/S2WW/pose-idle.png",
+   "attack": "/assets/skins/S2WW/pose-attack.png",
+   "jump": "/assets/skins/S2WW/pose-jump.png"
+  }
+ }
+}

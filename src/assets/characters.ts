@@ -1,10 +1,12 @@
 import Phaser from 'phaser';
 import level from '../level/data/level.json';
 import {TILE as T} from '../core/config';
-import {CHARACTERS,FACE} from './catalog';
-type Action={frames:string[];fps?:number;dur?:number};
-const FACE_KEY='player-face';
-const ACTION:Record<string,string>={IDLE:'idle',RUN:'run',JUMP:'jump',DOUBLE_JUMP:'djump',FALL:'fall',HURT:'fall',DASH:'dash',WIN:'idle'};
+import {CALIBRATION} from './catalog';
+import {ACTIONS,sheetKey,type ActionId,type CharacterSkin} from '../comfy/skin';
+/** DASH and WIN have no art of their own: run and idle stand in (exp3-asset-manifest). */
+const ACTION:Record<string,ActionId>={IDLE:'idle',RUN:'run',JUMP:'jump',DOUBLE_JUMP:'djump',FALL:'fall',HURT:'fall',DASH:'run',WIN:'idle'};
+/** Standing body height in cells (planning: about 2.25 cells). Calibration knob. */
+const BODY_CELLS=2.25;
 /** Editor `big`: the invincible player is drawn 1.25x. */
 const ALLY_SCALE=1.25;
 /** Editor easeBack (shield pop). */
@@ -32,37 +34,39 @@ export class Shield {
 }
 /** Power state for one frame: ally = seconds left (0 = none), since = seconds since it began, hit = run time of the last shield kill. */
 export type PowerView={ally:number;since:number;hit:number;blink:boolean};
-// Planning v0.3 §6.1: 10 frames per character, drawn 2.5 cells tall with the image bottom on the collision-box bottom.
-export class CharacterView {
-  sprite:Phaser.GameObjects.Image;shield:Shield;face?:Phaser.GameObjects.Image;
-  private c:typeof CHARACTERS.a;private f:typeof FACE.a.idle1;private action='';private since=0;private attackAt=-1;
-  constructor(scene:Phaser.Scene,private box:Phaser.GameObjects.Rectangle,id:string,debug=false,photo?:string) {
-    this.c=CHARACTERS[id==='b'?'b':'a'];this.f=FACE[id==='b'?'b':'a'].idle1;box.setAlpha(debug?.4:0);
-    this.sprite=scene.add.image(box.x,box.y,'chars/'+this.c.frames.idle1).setOrigin(.5,1).setDepth(5);
-    this.shield=new Shield(scene,6);
-    if(photo){ // UC03-1 custom face; the texture lives exactly as long as this scene run
-      if(scene.textures.exists(FACE_KEY))scene.textures.remove(FACE_KEY);
-      scene.textures.once(Phaser.Textures.Events.ADD_KEY+FACE_KEY,()=>{if(this.sprite.active)this.face=scene.add.image(box.x,box.y,FACE_KEY).setDepth(5);});
-      scene.textures.addBase64(FACE_KEY,photo);
-      scene.events.once('shutdown',()=>{if(scene.textures.exists(FACE_KEY))scene.textures.remove(FACE_KEY);});
-    }
+/** Registers a skin's sheets as Phaser spritesheets (presets are already loaded by PreloadScene). */
+export async function addSheets(textures:Phaser.Textures.TextureManager,skin:CharacterSkin){
+  for(const a of ACTIONS){
+    const key=sheetKey(skin,a),s=skin.actions[a];if(textures.exists(key))continue;
+    const image=new Image();image.src=s.sheet;await image.decode();
+    if(!textures.exists(key))textures.addSpriteSheet(key,image,{frameWidth:image.width/s.cols,frameHeight:image.height/s.rows});
   }
+}
+export const removeSheets=(textures:Phaser.Textures.TextureManager,skin:CharacterSkin)=>{for(const a of ACTIONS)textures.remove(sheetKey(skin,a));};
+// Sheet cells are padded squares; CALIBRATION puts the feet on the collision-box bottom and sizes the body to BODY_CELLS.
+export class CharacterView {
+  sprite:Phaser.GameObjects.Image;shield:Shield;
+  private action:ActionId|'' ='';private since=0;private attackAt=-1;
+  constructor(scene:Phaser.Scene,private box:Phaser.GameObjects.Rectangle,public skin:CharacterSkin,debug=false) {
+    box.setAlpha(debug?.4:0);
+    this.sprite=scene.add.image(box.x,box.y,sheetKey(skin,'idle'),0).setDepth(5);
+    this.shield=new Shield(scene,6);
+  }
+  /** Swap art mid-run (the custom character arriving in P3); position, facing and the current action's clock carry over. */
+  setSkin(skin:CharacterSkin){this.skin=skin;}
   attack(now:number){this.attackAt=now;}
   update(state:string,facing:number,now:number,power:PowerView={ally:0,since:0,hit:-9,blink:false}) {
-    const a=this.c.actions as Record<string,Action>,attacking=this.attackAt>=0&&now-this.attackAt<(a.attack.dur??.3);
+    const a=this.skin.actions,attacking=this.attackAt>=0&&now-this.attackAt<a.attack.frameCount/a.attack.fps;
     const name=attacking?'attack':ACTION[state]??'idle';if(name!==this.action){this.action=name;this.since=now;}
-    const act=a[name]??a.idle,t=now-this.since,i=act.fps?Math.floor(t*act.fps):0;
-    const frame=attacking?act.frames[Math.min(i,act.frames.length-1)]:act.frames[i%act.frames.length];
-    const bottom=this.box.y+this.box.displayHeight/2,big=power.ally?ALLY_SCALE:1;
-    this.sprite.setTexture('chars/'+(this.c.frames as Record<string,string>)[frame]).setPosition(this.box.x,bottom);
-    this.sprite.setScale(this.c.height*T/this.sprite.height*big).setFlipX(facing<0&&!this.c.noFlip.includes(frame)).setAngle(name==='dash'?facing*6:0);
+    const act=a[name],i=Math.floor((now-this.since)*act.fps),frame=attacking?Math.min(i,act.frameCount-1):i%act.frameCount;
+    const cal=CALIBRATION[this.skin.role],bottom=this.box.y+this.box.displayHeight/2,big=power.ally?ALLY_SCALE:1;
+    this.sprite.setTexture(sheetKey(this.skin,name),frame).setOrigin(cal.cx,cal.foot).setPosition(this.box.x,bottom);
+    // Idle faces the camera: mirroring it would only flip the jacket print.
+    this.sprite.setScale(BODY_CELLS*T/(cal.body*this.sprite.frame.height)*big).setFlipX(facing<0&&name!=='idle').setAngle(state==='DASH'?facing*6:0);
     // Editor: after a hit / respawn (1.5 s protection) the player blinks; the shield blinks with it.
-    const shown=!(power.blink&&Math.sin(now*40)>0);this.sprite.setVisible(shown);this.face?.setVisible(shown);
+    this.sprite.setVisible(!(power.blink&&Math.sin(now*40)>0));
     const h=this.box.displayHeight*big;
-    if(power.ally&&shown)this.shield.draw(this.box.x,bottom-h/2,h*level.itemArt.shield.w,now,{ph:power.since,left:power.ally,flash:Math.max(0,1-(now-power.hit)/.35)});
+    if(power.ally&&this.sprite.visible)this.shield.draw(this.box.x,bottom-h/2,h*level.itemArt.shield.w,now,{ph:power.since,left:power.ally,flash:Math.max(0,1-(now-power.hit)/.35)});
     else this.shield.hide();
-    // ponytail: one idle1 head anchor for every frame; add per-frame offsets if run/dash frames drift visibly.
-    const w=this.sprite.displayWidth,sh=this.sprite.displayHeight;
-    this.face?.setPosition(this.sprite.x+(this.sprite.flipX?-1:1)*(this.f.x-.5)*w,bottom-sh*(1-this.f.y)).setDisplaySize(this.f.d*sh,this.f.d*sh).setAngle(this.sprite.angle);
   }
 }

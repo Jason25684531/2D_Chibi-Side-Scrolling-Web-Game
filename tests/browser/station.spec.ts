@@ -16,7 +16,7 @@ test('Home traps focus before a run and above Replay countdown; Back restores fl
 test('M5 three-step readiness (character → attack item → nickname), Back, no P2 screen and isolated tutorial',async({page})=>{
   const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto('/');await expect(page.locator('[data-screen=P0]')).toBeVisible();
-  await page.keyboard.press('Enter');await expect(page.locator('[data-screen=P1] .character-card')).toHaveCount(5);await expect(page.locator('.character-card.locked:disabled')).toHaveCount(2);await expect(page.locator('[data-action=ready]')).toBeFocused();
+  await page.keyboard.press('Enter');await expect(page.locator('[data-screen=P1] .character-card')).toHaveCount(5);await expect(page.locator('.character-card.locked')).toHaveCount(0);await expect(page.locator('[data-action=ready]')).toBeFocused();
   await page.keyboard.press('Enter');await expect(page.locator('.item-card')).toHaveCount(5);
   await page.keyboard.press('Backspace');await expect(page.locator('.character-card')).toHaveCount(5);
   await page.keyboard.press('KeyZ');await expect(page.locator('.item-card')).toHaveCount(5);
@@ -34,7 +34,7 @@ test('M5 three-step readiness (character → attack item → nickname), Back, no
   await page.keyboard.press('Enter');await expect(page.locator('#countdown')).toHaveText(/^[123]$/);await expect(page.locator('[data-action=start-game]')).toBeDisabled();
   await page.keyboard.press('KeyZ');await page.waitForFunction(()=>(window as any).__gameplay.body.velocity.y<0);
   await expect(page.locator('[data-screen=P4]')).toBeVisible({timeout:5000});
-  expect(await page.evaluate((old)=>{const s=(window as any).__gameplay;return s.run.runId!==old&&s.run.duration===120&&!s.session.tutorial&&s.session.score.total===0&&s.session.stats.kills===0;},tutorialId)).toBe(true);
+  await page.waitForFunction((old)=>{const s=(window as any).__gameplay;return s.run.runId!==old&&s.run.duration===120&&!s.session.tutorial&&s.session.score.total===0&&s.session.stats.kills===0;},tutorialId,{timeout:3000}); // P4 draws one frame before scene.restart() swaps in the real run
   expect(errors).toEqual([]);
 });
 
@@ -71,12 +71,10 @@ test('M6 full keyboard Goal flow, screenshots, result wait, replay resets and qu
   expect(errors).toEqual([]);expect(external).toEqual([]);
 });
 
-test('Time Up presentation, generating readiness, simulated pad through three steps and once-only result',async({page})=>{
+test('Time Up presentation, simulated pad through three steps and once-only result',async({page})=>{
   test.setTimeout(30000);await page.goto('/');await expect(page.locator('[data-screen=P0]')).toBeVisible();
-  await page.evaluate(()=>{const u=(window as any).__station;u.adapter.enqueue('測試玩家');u.adapter.current.assetState='generating';});
-  await expect(page.locator('[data-screen=P1]')).toBeVisible();await expect(page.locator('[data-action=ready]')).toBeDisabled();
-  await page.keyboard.press('Enter');await expect(page.locator('[data-screen=P1]')).toBeVisible();
-  await page.evaluate(()=>{(window as any).__station.adapter.current.assetState='fallback';});await expect(page.locator('[data-action=ready]')).toBeFocused();
+  await page.evaluate(()=>{(window as any).__station.adapter.enqueue('測試玩家');});
+  await expect(page.locator('[data-screen=P1]')).toBeVisible();await expect(page.locator('[data-action=ready]')).toBeFocused();
   const press=async(index:number)=>{await page.evaluate(i=>{(window as any).__station.testPad={mapping:'standard',axes:[0],buttons:Array.from({length:16},(_,j)=>({pressed:j===i}))};},index);await page.waitForTimeout(70);await page.evaluate(()=>{(window as any).__station.testPad=null;});await page.waitForTimeout(70);};
   await press(0);await expect(page.locator('.item-card')).toHaveCount(5);await expect(page.locator('[data-action=ready]')).toBeFocused();await press(0);
   await expect(page.locator('#nickname')).toBeVisible();await press(0);
@@ -144,4 +142,25 @@ test('records panel: delete one row and reset all, each only on the second press
   await expect(page.locator('.records .empty-state')).toBeVisible();
   await page.keyboard.press('Backspace');await expect(page.locator('[data-action=records]')).toBeFocused();
   await page.reload();await expect(page.locator('.top20 .empty-state')).toBeVisible();
+});
+
+test('nickname keypad: the stick reaches it, the first key replaces the default name, delete and the 8-character cap work',async({page})=>{
+  await page.goto('/');for(let i=0;i<3;i++)await page.keyboard.press('Enter');
+  await expect(page.locator('#nickname')).toHaveValue(/^PLYR\d{4}$/);
+  const key=(k:string)=>page.locator(`[data-action=key-${k}]`);
+  await expect(page.locator('.keypad .key')).toHaveCount(37);
+  await expect(page.locator('[data-action=ready]')).toBeFocused();
+  const pad=async(index:number)=>{await page.evaluate(i=>{(window as any).__station.testPad={mapping:'standard',axes:[0],buttons:Array.from({length:16},(_,j)=>({pressed:j===i}))};},index);await page.waitForTimeout(70);await page.evaluate(()=>{(window as any).__station.testPad=null;});await page.waitForTimeout(70);};
+  await pad(12);expect(await page.evaluate(()=>(document.activeElement as HTMLElement).dataset.action)).toMatch(/^key-/); // stick up from NEXT lands on the keypad
+  await key('Q').focus();await pad(0);await expect(page.locator('#nickname')).toHaveValue('Q'); // the first key replaces the auto PLYR#### name; pad confirm types once
+  await key('W').click();await expect(page.locator('#nickname')).toHaveValue('QW'); // then keys append
+  for(let i=0;i<3;i++)await key('del').click();
+  await expect(page.locator('#nickname')).toHaveValue('');
+  await key('A').click();await key('1').click();
+  await key('B').focus();await page.keyboard.press('Enter');
+  await expect(page.locator('#nickname')).toHaveValue('A1B');
+  for(const k of 'CDEFGHJ')await key(k).click();
+  await expect(page.locator('#nickname')).toHaveValue('A1BCDEFG');
+  await page.locator('[data-action=ready]').click();
+  await expect(page.locator('[data-screen=P3] .who')).toContainText('A1BCDEFG');
 });

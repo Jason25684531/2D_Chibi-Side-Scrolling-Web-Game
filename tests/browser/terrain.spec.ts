@@ -24,13 +24,13 @@ test('free camera: lead side, ignores jumps, looks down after 2 cells, segment a
   await page.goto('/?debug=1');await page.waitForFunction(()=>(window as any).__gameplay?.body?.blocked.down);
   const r=await page.evaluate(()=>{
     const s=(window as any).__gameplay;s.togglePause();const m=s.cameraManager,c=s.cameras.main,dt=1/24,T=32;
-    const run=(n:number,p:any)=>{for(let i=0;i<n;i++)m.update(p,dt);return{x:c.scrollX,y:c.scrollY};};
+    const run=(n:number,p:any)=>{for(let i=0;i<n;i++)m.update(p,dt);c.preRender();return{x:c.worldView.x,y:c.worldView.y};};
     const ground={x:30*T,top:17*T-64,bottom:17*T,vx:256,vy:0,grounded:true};
     m.reset(ground.x,ground.bottom);const settled=run(60,ground);
     const jump=run(6,{...ground,top:ground.top-100,bottom:ground.bottom-100,vy:-300,grounded:false});
     m.reset(ground.x,ground.bottom);run(30,ground);const fall=run(30,{...ground,top:30*T-64,bottom:30*T,vy:600,grounded:false});
     m.reset(99*T,17*T);const right=run(60,{...ground,x:99*T});
-    m.reset(91*T,60*T);const zoom=(()=>{for(let i=0;i<60;i++)m.update({x:91.5*T,top:60*T-64,bottom:60*T,vx:0,vy:0,grounded:true},dt,1);return c.zoom;})();
+    m.reset(91*T,60*T);const zoom=(()=>{for(let i=0;i<60;i++)m.update({x:91.5*T,top:60*T-64,bottom:60*T,vx:0,vy:0,grounded:true},dt,1);return c.zoom/2;})(); // RENDER_SCALE 2 is the base zoom
     return{settled,jump,fall,right,zoom,hud:s.hud.scrollFactorX,segBottom:23*T-540};
   });
   expect(r.settled.x).toBeCloseTo(30*T-960*.4,0); // facing right: player at 40% of the width (10% lead)
@@ -66,7 +66,7 @@ test('Scene pause freezes an active camera move and resume completes it',async({
   await page.waitForTimeout(500);
   expect(await page.evaluate(()=>{const s=(window as any).__gameplay;return{x:s.cameras.main.scrollX,elapsed:s.run.elapsed,playerY:s.player.y};})).toEqual(paused);
   await page.click('#pause');
-  await page.waitForFunction(()=>Math.abs((window as any).__gameplay.cameras.main.scrollX-(20*32-960*.4))<1);
+  await page.waitForFunction(()=>Math.abs((window as any).__gameplay.cameras.main.worldView.x-(20*32-960*.4))<1);
   const resumed=await page.evaluate(()=>{const s=(window as any).__gameplay;return{elapsed:s.run.elapsed,phase:s.run.phase};});
   expect(resumed.phase).toBe('running');expect(resumed.elapsed).toBeGreaterThan(paused.elapsed);
 });

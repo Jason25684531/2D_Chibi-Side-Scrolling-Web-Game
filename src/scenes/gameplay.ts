@@ -1,15 +1,17 @@
 import Phaser from 'phaser';
-import { TEST_PROFILE as P, TILE as T, ATTACK_ITEMS, weaponMode } from '../core/config';
+import { TEST_PROFILE as P, TILE as T, ATTACK_ITEMS, weaponMode, RENDER_SCALE as R } from '../core/config';
 import { FixedStepController } from '../core/fixed-step';
 import { GameplayStateMachine, RunStateManager } from '../core/state';
 import { InputAdapter, type Pad } from '../input/adapter';
 import { activePad } from '../input/gamepad';
 import {PlayerController} from '../player/controller';
 import {CharacterView} from '../assets/characters';
+import {PRESETS,roleOf} from '../assets/catalog';
+import type {CharacterSkin} from '../comfy/skin';
 import {stepPhysics} from '../physics/step';
 import {LEVEL,TUTORIAL_LEVEL,TUTORIAL_CLIP,validateLevel} from '../level/data';
 import {TerrainSystem} from '../terrain/system';
-import {CameraManager} from '../camera/manager';
+import {CameraManager,renderOffset} from '../camera/manager';
 import {GameplaySession} from '../core/session';
 import {BadgeWorld} from '../badge/world';
 import {RespawnManager} from '../respawn/manager';
@@ -38,7 +40,7 @@ export class GameplayScene extends Phaser.Scene {
   private frameTime=0;
   level=LEVEL;
   constructor() { super('Gameplay'); }
-  create(data:{duration?:number;sessionId?:string;characterId?:string;attackItem?:string;photo?:string;tutorial?:boolean;flow?:GameplayStateMachine}={}) {
+  create(data:{duration?:number;sessionId?:string;skin?:CharacterSkin;attackItem?:string;tutorial?:boolean;flow?:GameplayStateMachine}={}) {
     const debug=new URLSearchParams(location.search).get('debug')==='1';
     this.frameTime=performance.now();this.shockUntil=0;this.stompFx={x:0,y:0,t0:-9};
     this.level=data.tutorial?TUTORIAL_LEVEL:LEVEL;
@@ -56,11 +58,11 @@ export class GameplayScene extends Phaser.Scene {
     this.physics.add.existing(this.player); this.body=this.player.body as Phaser.Physics.Arcade.Body;
     this.body.setCollideWorldBounds(true);
     this.controller=new PlayerController(this.body);
-    this.presentation=new CharacterView(this,this.player,data.characterId??(document.querySelector('#character') as HTMLSelectElement)?.value??'a',debug,data.photo);
+    this.presentation=new CharacterView(this,this.player,data.skin??PRESETS[roleOf((document.querySelector('#character') as HTMLSelectElement)?.value)],debug);
     this.clearInput();
     this.terrain=new TerrainSystem(this,this.level,this.player,()=>this.run.elapsed,()=>{this.controller.bounce();this.session.stats.bounces++;sfx('ENV-01');},()=>this.run.elapsed<this.controller.dropUntil,debug);
     this.cameraManager=new CameraManager(this.cameras.main,this.level);this.cameraManager.reset(this.player.x,this.body.bottom);
-    if(data.tutorial)this.cameras.main.setViewport(290,140,620,240);
+    if(data.tutorial)this.cameras.main.setViewport(290*R,140*R,620*R,240*R);
     this.respawner=new RespawnManager(this.terrain,this.level);
     this.badges=new BadgeWorld(this,this.session,this.player,this.terrain,this.level.badges);
     this.enemies=new EnemySystem(this,this.session,this.player,this.level,cause=>this.takeDamage(cause),y=>{this.controller.bounce(P.jumpSpeed*P.stompBounce);this.stompFx={x:this.player.x,y,t0:this.run.elapsed};});
@@ -161,7 +163,7 @@ export class GameplayScene extends Phaser.Scene {
       if(Phaser.Geom.Intersects.RectangleToRectangle(bounds,this.goal.getBounds())){this.session.finish('goal');this.finalize();}
       if(!this.session.result&&this.run.remaining===0){this.session.finish('time-up');this.finalize();}
       if(this.session.result)return;
-      if(this.session.tutorial)this.cameras.main.setScroll(Math.max(0,this.player.x-200),Math.min(this.level.start.y-140,this.player.y-120));
+      if(this.session.tutorial){const c=this.cameras.main,o=renderOffset(c);c.setScroll(Math.max(0,this.player.x-200)-o.x,Math.min(this.level.start.y-140,this.player.y-120)-o.y);}
       else this.cameraManager.update({x:this.player.x,top:this.body.top,bottom:this.body.bottom,vx:this.body.velocity.x,vy:this.body.velocity.y,grounded:this.body.blocked.down},dt,this.goalNear());
     });
     const pw=this.session.power,t=this.run.elapsed;

@@ -2,6 +2,8 @@ import level from '../level/data/level.json';
 import items from '../level/data/attack-items.json';
 // Runtime cell is 32 px (level JSON uses 64 px), keeping the 960x540 logic view equal to the editor's 1920x1080.
 export const TILE=32;
+/** The canvas is drawn at RENDER_SCALE x the 960x540 logic view so a 1920x1080 kiosk gets native pixels instead of a CSS upscale. */
+export const RENDER_SCALE=2;
 type LevelPhysics={run:number;jump:number;djump:number;gravity:number;dashMult:number;dashTime:number;springH:number};
 /** Planning v0.3 §8: jump heights come from v = sqrt(2gh); every value scales by TILE/64. */
 export function deriveProfile(p:LevelPhysics,tile=TILE){

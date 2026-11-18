@@ -1,11 +1,11 @@
 import Phaser from 'phaser';
 import './style.css';
-import { TEST_PROFILE as P } from './core/config';
+import { TEST_PROFILE as P, RENDER_SCALE } from './core/config';
 import { PreloadScene } from './scenes/preload';
 import { GameplayScene } from './scenes/gameplay';
 import {StationUI} from './ui/station';
 import type {Actions} from './input/adapter';
-const game=new Phaser.Game({ type:Phaser.CANVAS, parent:'game', width:P.width, height:P.height, backgroundColor:'#253247',
+const game=new Phaser.Game({ type:Phaser.CANVAS, parent:'game', width:P.width*RENDER_SCALE, height:P.height*RENDER_SCALE, backgroundColor:'#253247',
   physics:{default:'arcade',arcade:{gravity:{x:0,y:P.gravity},customUpdate:true}},scene:[PreloadScene,GameplayScene] });
 const scene=()=>game.scene.getScene('Gameplay') as GameplayScene;
 const debug=new URLSearchParams(location.search).get('debug')==='1';

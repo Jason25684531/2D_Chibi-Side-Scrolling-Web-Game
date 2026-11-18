@@ -11,12 +11,12 @@
 | 指令 | 用途 |
 |---|---|
 | `npm install` | 安裝依賴 |
-| `npm run dev` | 啟動開發伺服器（`127.0.0.1`；CUSTOM 拍照需要 secure context，正式機台請用 localhost 或 HTTPS） |
+| `npm run dev` | 啟動開發伺服器（`127.0.0.1`；拍照需要 secure context，正式機台請用 localhost 或 HTTPS）。站台必須用 `npm run dev` 或 `vite preview` 提供，`/comfy` 代理才存在 |
 | `npm run build` | 型別檢查 + 打包（`index.html`、`prototype.html` 兩個入口） |
 | `npm run typecheck` | 只跑 TypeScript 型別檢查 |
 | `npm test` | Vitest 單元 + 整合測試 |
 | `npm run test:browser` | Playwright 瀏覽器端測試 |
-| `npm run assets:stage` | 從 `1102_關卡編輯器` 封包把關卡、角色、怪物、道具素材整理到 `public/assets/cyber-run/` |
+| `npm run assets:stage` | 從 `1102_關卡編輯器` 封包整理關卡、怪物、道具素材到 `public/assets/cyber-run/`；從 `assest/preset_*` 整理四名角色到 `public/assets/skins/`；複製 ComfyUI workflow 到 `public/assets/comfy/` |
 
 | 入口網址 | 說明 |
 |---|---|
@@ -126,10 +126,12 @@ flowchart TB
 | `terrain/system.ts` | `TerrainSystem` | 地形：地面、平台、單向、移動、彈跳、斜坡 |
 | `enemy/system.ts` | `EnemySystem`、`KINDS` | 敵人：眼魔 `beholder`（巡邏／追擊／雷射）、魔蛛 `charger`（衝撞）；各種類的 AI、動畫與特效在 `KINDS` 行為表，新增怪物只加一筆；另含投擲物與範圍攻擊 |
 | `badge/world.ts` | `BadgeWorld` | 場景中的徽章物件與拾取判定 |
-| `camera/manager.ts` | `CameraManager` | 鏡頭跟隨與邊界 |
+| `camera/manager.ts` | `CameraManager` | 鏡頭跟隨與邊界；畫布以 `RENDER_SCALE` 2 倍原生解析度繪製，鏡頭固定放大 2 倍 |
 | `respawn/manager.ts` | `RespawnManager` | 掉坑後找安全點重生 |
 | `level/data.ts` | `LEVEL`、`TUTORIAL_LEVEL`、`validateLevel` | 讀入關卡編輯器的 `fg3-level` JSON（`level/data/level.json`）；新手訓練關＝正式關卡左側 40×23 格切片 |
-| `assets/characters.ts` | `CharacterView`、`Shield` | 角色 S3WW／S2AM（含 CUSTOM 頭像）的動畫、受擊閃爍、無敵放大與能量護罩 |
+| `assets/characters.ts` | `CharacterView`、`Shield`、`addSheets` | 依 sprite sheet skin 播放角色動畫（預設或 ComfyUI 客製化，P3 可當場換 skin）、受擊閃爍、無敵放大與能量護罩 |
+| `comfy/skin.ts` | `parseManifest`、`ROLES` | 四名角色代號與 `game_manifest.json` 解析，預設與客製化共用 |
+| `comfy/client.ts` | `generate`、`probe`、`drop` | 經 `/comfy` 代理上傳照片、排入 workflow、輪詢、取回並縮圖、取消與逾時 |
 | `assets/level-art.ts` | `levelArt` | 背景、鋪設美術、彈跳板、移動平台、傳送門、道具動態；地燈踩到才亮 |
 | `assets/electric.ts` | `electricFx`、`scanLines` | 電網與雷射陷阱的電弧特效；從美術圖判讀雷射線／燈條 |
 | `assets/player-fx.ts` | `playerFx` | 衝刺殘影與速度線、起跳氣流、二段跳光環、踩怪衝擊 |
@@ -140,8 +142,8 @@ flowchart TB
 | 檔案 | 說明 |
 |---|---|
 | `station.ts` | `StationUI`：Kiosk 主流程控制器，渲染每個階段畫面、處理鍵盤／搖桿焦點與攝影機開關 |
-| `readiness.ts` | P1 畫面組裝（純函式）：角色／拍照／道具／暱稱步驟、上一步／下一步主鍵 |
-| `camera.ts` | CUSTOM 頭像：開關攝影機、拍出圓形鏡像照片、把頭像合成到兩種身體的立繪 |
+| `readiness.ts` | P1 畫面組裝（純函式）：角色／拍照（僅 CUSTOM）／道具／暱稱步驟、上一步／下一步主鍵 |
+| `camera.ts` | 開關攝影機、拍下畫面正中央 1024×1024 PNG（不鏡像；畫面上的預覽才鏡像） |
 | `mock-station.ts` | `MockStation`：模擬後端，身分佇列與排行榜存在 `localStorage`（`rog-future-gamer.records.v1`）；照片只留在記憶體的玩家牆，不寫入紀錄 |
 | `hud.ts` | 遊戲中 HUD（時間、徽章、分數） |
 | `components.ts` | HTML 小元件（按鈕、面板、頭像），內含 `escape` 防 XSS |
@@ -163,7 +165,7 @@ flowchart LR
 | 階段 | 畫面 | 說明 |
 |---|---|---|
 | P0 | 待機牆 | 玩家牆 + TOP 20；按 PLAY（Z／Enter）排入後進 P1 |
-| P1 | 準備 | 角色 S3WW／S2AM／CUSTOM（拍照、可重拍，再選身體；另有兩格長官 VIP 欄位，暫時鎖定）→ 攻擊道具 → 暱稱（最多 8 字）；主鍵分上一步／下一步，第一步的上一步回 P0 |
+| P1 | 準備 | 角色 S2AM／S3WW／S1WM／S2WW／CUSTOM（CUSTOM 才插入拍照步驟：選身體模板、拍照可重拍，按「生成角色」才送 ComfyUI）→ 攻擊道具 → 暱稱（最多 8 字）；主鍵分上一步／下一步，第一步的上一步回 P0 |
 | P2 | 直通 | 不顯示畫面；局長預設 120 秒，營運人員可在 P0 系統選單（H）切換 60／90／100／120 |
 | P3 | 新手訓練場 | 在訓練切片自由練習（不計分、不限時），按「開始遊戲」（Enter）後倒數 3 秒進 P4 |
 | P4 | 遊戲中 | 正式關卡 + HUD |
@@ -174,6 +176,17 @@ flowchart LR
 > 合法轉換規則寫在 `GameplayStateMachine.transition()`：只能前進一步、任意回 P0、P2→P1、P7→P4。
 
 ---
+
+## ComfyUI 客製化角色
+
+| 項目 | 內容 |
+| --- | --- |
+| 服務 | 本機 ComfyUI `127.0.0.1:8188`，瀏覽器經 `/comfy` 同源代理存取（ComfyUI 擋跨來源 POST） |
+| workflow | 在 ComfyUI 介面「Export (API)」存成 `ComfyUI_API/2026_Taskforce_2028_Platformer_Final_CAM_261115.api.json`，再跑 `npm run assets:stage`；缺檔時「拍照客製化」停用 |
+| 改寫的節點 | `1` 角色模板（S2AM=1、S3WW=2、S1WM=3、S2WW=4）、`2` 輸出名稱（`P` + 12 碼隨機）、`3` 上傳的照片 |
+| 等待 | P3 訓練場可練習，生成完成前「開始遊戲」停用；240 秒逾時或失敗改用原角色 |
+| 費用 | 每次「生成角色」都會呼叫 fal.ai 計費；重拍在送出前不計費 |
+| 檔案清理 | 玩家照片留在 ComfyUI `input/station/` 與 `output/Taskforce_2028_Platformer/P*_<角色>/`，目前由營運人員手動清理 |
 
 ## 一局遊戲的資料流
 

@@ -183,16 +183,16 @@ kbd{margin-right:10px;padding:4px 10px;border:1px solid var(--rog-line);backgrou
 .cards{position:absolute;left:96px;top:300px;display:flex;gap:24px}
 .character-card{width:236px;height:352px}
 /* Step 1 holds five cards (3 + 2 locked VIP) left of the hero at x1000. */
-.cards:not(.bodies){gap:16px}.cards:not(.bodies) .character-card{width:164px}.cards:not(.bodies) .character-card .name strong{font-size:25px}.cards:not(.bodies) .character-card .name small{font-size:12px;letter-spacing:.06em}
+.cards:not(.bodies){gap:16px}.cards .character-card{width:164px}.cards .character-card .name strong{font-size:25px}.cards .character-card .name small{font-size:12px;letter-spacing:.06em}
 .character-card.locked{opacity:.45;border-style:dashed;cursor:not-allowed}.character-card.locked:hover{transform:none;border-color:rgba(58,160,255,.55)}
 .character-card .art>.ic{width:120px;height:120px;margin-bottom:60px;stroke:var(--rog-muted);stroke-width:1.4;fill:none}.character-card .art>.photo{height:150px;margin-bottom:50px;border-radius:50%}
-/* P1 photo step (UC03-1): round viewfinder + shoot/retake, body cards beside it. */
+/* P1 customize step: square viewfinder = exactly the square that is captured; choice cards beside it. */
 .booth{position:absolute;left:96px;top:300px;width:420px;display:flex;flex-direction:column;align-items:center;gap:24px}
-.viewfinder{position:relative;width:400px;height:400px;border-radius:50%;overflow:hidden;background:#0a0d14;border:3px solid var(--rog-red);box-shadow:var(--rog-glow-red);display:flex;align-items:center;justify-content:center}
-.viewfinder video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}.viewfinder img{width:100%;height:100%}
+.viewfinder{position:relative;width:400px;height:400px;border-radius:16px;overflow:hidden;background:#0a0d14;border:3px solid var(--rog-red);box-shadow:var(--rog-glow-red);display:flex;align-items:center;justify-content:center}
+.viewfinder video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}.viewfinder img,.character-card .art>.photo{width:100%;height:100%;transform:scaleX(-1)}
 .viewfinder p{padding:40px;text-align:center;font:700 26px/1.5 var(--font-zh);color:var(--rog-red)}.viewfinder p small{display:block;margin-top:8px;font:500 18px var(--font-zh);color:var(--rog-muted)}
 .booth .btn{min-width:400px}.booth .privacy{font:500 18px var(--font-zh);color:var(--rog-muted)}
-.cards.bodies{left:560px}
+.cards.bodies{left:560px;gap:12px}.cards.bodies .character-card{width:132px} /* four bodies end at 1124, left of the hero art at 1150 */
 .item-card{width:316px;height:460px;border-top:4px solid var(--mode)}
 .item-card .art{top:40px;height:230px}.item-card .art img{height:220px}
 .item-card .name{height:150px;padding:14px 20px}
@@ -217,7 +217,10 @@ kbd{margin-right:10px;padding:4px 10px;border:1px solid var(--rog-line);backgrou
 .step-nickname .hero{left:96px;top:300px;width:700px;height:640px}
 .step-nickname .hero .plate{left:140px;width:460px;height:600px}
 .step-nickname .hero img{left:120px;bottom:10px;height:580px}
-.step-nickname .name-plate{left:860px;top:430px;width:964px}
+.step-nickname .name-plate{left:860px;top:300px;width:964px}
+.keypad{display:grid;gap:10px;margin-top:16px}.keypad>div{display:flex;gap:10px}
+.keypad .key{box-sizing:border-box;width:87px;height:62px;margin:0;padding:0;font:700 30px var(--font-display);color:#fff;background:var(--rog-glass);border:1px solid var(--rog-line);cursor:pointer}
+.keypad .key.del{color:var(--rog-red)}.keypad .key:focus-visible{outline:none;border-color:#fff;box-shadow:var(--rog-focus)}
 .item-card[aria-pressed=true]{border-top-color:var(--mode)}
 .slogan{position:absolute;left:184px;top:138px;font:600 14px var(--font-label);letter-spacing:.32em;color:var(--rog-muted)}.slogan b{margin:0 10px;color:var(--rog-red)}
 
@@ -323,3 +326,7 @@ kbd{margin-right:10px;padding:4px 10px;border:1px solid var(--rog-line);backgrou
 .pick-pop{position:absolute;left:30px;top:-36px;font:900 italic 34px var(--font-display);color:var(--mode);opacity:0;pointer-events:none}
 .hud-location{position:absolute;right:96px;bottom:54px;font:600 16px var(--font-label);letter-spacing:.4em;color:#dae7ff;text-shadow:0 1px 2px #000,0 0 8px #000;pointer-events:none}
 .hud-location:not(:empty):before{content:'SEGMENT';margin-right:16px;color:var(--rog-muted)}
+
+/* P3 custom character status under the player name. */
+.player .gen{margin:8px 24px 0;display:grid;gap:6px;font:600 18px var(--font-zh);color:var(--rog-muted)}.player .gen[data-state=ready]{color:var(--rog-gold,#ffd54f)}.player .gen[data-state=failed]{color:var(--rog-red)}.player .gen .progress{width:100%}
+.player:has(.gen) .avatar{height:200px}

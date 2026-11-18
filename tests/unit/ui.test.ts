@@ -10,7 +10,7 @@ it('escapes untrusted identity, supplies native disabled controls and formats ti
   expect(button('exit','結束','EXIT')).toContain('class="btn "');expect(button('exit','結束','EXIT',false,'primary','exit')).toMatch(/class="btn primary".*<svg class="ic"/);
 });
 it('saves an attempt once and orders planning v0.3 titles by rarity',()=>{
-  const a=new MockStation();a.enqueue('Player');expect(a.current).toMatchObject({characterId:'a',attackItem:'B_ALLY.png'});
+  const a=new MockStation();a.enqueue('Player');expect(a.current).toMatchObject({characterId:'S2AM',attackItem:'B_ALLY.png',generation:{state:'none'}});
   const s=new GameplaySession(100,a.current.sessionId);
   s.tick(40);s.stats.maxCombo=4;s.stats.stomps=5;s.stats.bolts=3;s.stats.bounces=4;
   for(let i=0;i<45;i++)s.pickup(String(i));

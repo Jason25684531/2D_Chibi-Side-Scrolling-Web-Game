@@ -25,12 +25,12 @@ test('tutorial lessons come from the practice slice, follow runtime actions and 
   expect(await page.evaluate(()=>{const s=(window as any).__gameplay.session;return{tutorial:s.tutorial,score:s.score.total,badges:s.badges.held,armed:s.power.armed,ally:s.power.ally,bounces:s.stats.bounces};})).toEqual({tutorial:false,score:0,badges:0,armed:false,ally:false,bounces:0});
 });
 
-test('character B, attack item, nickname input, real tutorial actions and fixed authoritative HUD',async({page})=>{
+test('another character, attack item, nickname input, real tutorial actions and fixed authoritative HUD',async({page})=>{
   test.setTimeout(35000);
   const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto('/');await page.locator('[data-action=demo]').click();
-  await page.locator('[data-action=character-b]').click();
-  await expect(page.locator('[data-action=character-b]')).toHaveAttribute('aria-pressed','true');
+  await page.locator('[data-action=character-S1WM]').click();
+  await expect(page.locator('[data-action=character-S1WM]')).toHaveAttribute('aria-pressed','true');
   await page.screenshot({path:'docs/evidence/rog-uiux/selection.png'});
   await page.locator('[data-action=ready]').click();
   await page.locator('[data-action=item-1]').click();await expect(page.locator('[data-action=item-1]')).toHaveAttribute('aria-pressed','true');
@@ -42,7 +42,7 @@ test('character B, attack item, nickname input, real tutorial actions and fixed 
   await expect(page.locator('.modal.screen')).toHaveCount(0);
   await page.locator('[data-action=ready]').click();
   await page.waitForFunction(()=>!!(window as any).__gameplay?.session?.tutorial);
-  expect(await page.evaluate(()=>{const s=(window as any).__gameplay;return{item:s.attackItem,char:s.presentation.sprite.texture.key.slice(0,10)};})).toEqual({item:'C_ROG Chakram X Origin.png',char:'chars/S2AM'});
+  expect(await page.evaluate(()=>{const s=(window as any).__gameplay;return{item:s.attackItem,char:s.presentation.sprite.texture.key};})).toEqual({item:'C_ROG Chakram X Origin.png',char:'S1WM/idle'});
   await page.keyboard.down('ArrowRight');await page.waitForTimeout(300);await page.keyboard.up('ArrowRight');
   await expect(page.locator('[data-lesson=移動]')).toHaveAttribute('data-state','completed');
   await page.screenshot({path:'docs/evidence/rog-uiux/tutorial.png'});

@@ -13,7 +13,7 @@ const ICONS:Record<string,string>={
   camera:'<path d="M3 8h4l2-3h6l2 3h4v11H3z"/><circle cx="12" cy="13" r="4"/>',lock:'<rect x="5" y="11" width="14" height="10"/><path d="M8 11V7a4 4 0 018 0v4"/>'
 };
 export const icon=(key:string)=>ICONS[key]?`<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">${ICONS[key]}</svg>`:'';
-export const avatar=(id='a',frame:Parameters<typeof pose>[1]='idle1',src=pose(id,frame))=>`<div class="avatar"><img src="${src}" alt="${escape(characterName(id))}"></div>`;
+export const avatar=(id='a',frame:Parameters<typeof pose>[1]='idle',src=pose(id,frame))=>`<div class="avatar"><img src="${src}" alt="${escape(characterName(id))}"></div>`;
 /** Icon + bilingual label + right-aligned value; `extra` is trusted markup after the value. */
 export const statRow=(ic:string,zh:string,en:string,value:unknown,cls='',extra='')=>`<div class="stat">${icon(ic)}<span class="lbl">${zh}<small>${en}</small></span><strong class="val ${cls}">${escape(value)}${extra}</strong></div>`;
 /** variant: '' secondary | primary | ghost. Same markup and CSS on every screen. */

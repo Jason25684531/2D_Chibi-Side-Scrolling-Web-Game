@@ -1,8 +1,13 @@
 import type Phaser from 'phaser';
-import {TEST_PROFILE as P,TILE as T} from '../core/config';
+import {TEST_PROFILE as P,TILE as T,RENDER_SCALE} from '../core/config';
 import type {LevelData,Segment} from '../level/data';
 // Planning editor `camera: "free"`: damped 2D follow that tracks the last ground, not jumps, clamped to segments.
 const LEAD=.1,BAND=16*T,W=P.width,H=P.height;
+/**
+ * The canvas is RENDER_SCALE x the logic view and the camera zooms RENDER_SCALE x about its centre (Phaser's worldView and
+ * bounds assume that origin). Scroll = logic left/top minus this constant; the goal zoom then stays centred with no extra term.
+ */
+export const renderOffset=(c:Phaser.Cameras.Scene2D.Camera)=>({x:c.width*(1-1/RENDER_SCALE)/2,y:c.height*(1-1/RENDER_SCALE)/2});
 type Velocity={x:number;y:number;f:number;l:number};
 /** Unity-style SmoothDamp; velocity is kept in s[key] so motion stays continuous. */
 function smoothDamp(cur:number,target:number,s:Velocity,key:keyof Velocity,st:number,dt:number){
@@ -15,7 +20,10 @@ const clamp=(v:number,lo:number,hi:number)=>Math.max(lo,Math.min(hi,v));
 type Follow={x:number;bottom:number;top:number;vx:number;vy:number;grounded:boolean};
 export class CameraManager {
   private v:Velocity={x:0,y:0,f:0,l:0};private face=1;private leadDir=1;private leadT=0;private look=0;private camFeet=0;private groundFeet=0;zoom=0;
-  constructor(readonly camera:Phaser.Cameras.Scene2D.Camera,readonly level:LevelData){camera.setBounds(0,0,level.width,level.height);}
+  /** Left / top of the logic view in world px; the camera itself is only written by apply(). */
+  private sx=0;private sy=0;
+  constructor(readonly camera:Phaser.Cameras.Scene2D.Camera,readonly level:LevelData){camera.setBounds(0,0,level.width,level.height);this.apply();}
+  private apply(){this.camera.setZoom(RENDER_SCALE*(1+.08*this.zoom)).setScroll(this.sx-renderOffset(this.camera).x,this.sy-renderOffset(this.camera).y);}
   segAt(x:number,y:number):Segment|undefined{return this.level.segments.find(s=>x>=s.left&&x<s.right&&y>=s.top&&y<s.bottom);}
   private exitsDown(s:Segment){return s.dir==='down'||(s.dir==='left'?!this.segAt(s.left-1,s.top):!this.segAt(s.right,s.top));}
   private inExit(s:Segment,x:number){return s.dir==='down'||(s.dir==='left'?x<s.left+BAND:x>=s.right-BAND);}
@@ -35,10 +43,10 @@ export class CameraManager {
   }
   reset(x:number,feet:number){
     this.v={x:0,y:0,f:0,l:0};this.face=this.leadDir=1;this.leadT=0;this.look=0;this.camFeet=this.groundFeet=feet;
-    const t=this.target(x,feet,1,0);this.camera.setScroll(t.x,t.y);
+    const t=this.target(x,feet,1,0);this.sx=t.x;this.sy=t.y;this.apply();
   }
   update(p:Follow,dt:number,goalNear=0){
-    if(!(dt>0))return;const c=this.camera,feet=p.bottom;
+    if(!(dt>0))return;const feet=p.bottom;
     if(p.grounded)this.camFeet=this.groundFeet=feet;
     else if(feet>this.camFeet)this.camFeet=feet;
     else if(feet<this.camFeet-5.5*T)this.camFeet=feet+5.5*T; // springs: follow only once the head nears the HUD
@@ -46,13 +54,13 @@ export class CameraManager {
     const d=Math.abs(p.vx)>P.speed*.3?Math.sign(p.vx):0;
     if(d&&d!==this.leadDir){this.leadT+=dt;if(this.leadT>.35){this.leadDir=d;this.leadT=0;}}else this.leadT=0;
     this.face=smoothDamp(this.face,this.leadDir,this.v,'f',.45,dt);
-    const t=this.target(p.x,this.camFeet,this.face,this.look),oy=c.scrollY;
-    c.scrollX=clamp(smoothDamp(c.scrollX,t.x,this.v,'x',.12,dt),0,Math.max(0,this.level.width-W));
-    let y=smoothDamp(c.scrollY,t.y,this.v,'y',t.y>c.scrollY&&p.vy>150?.14:.3,dt);
+    const t=this.target(p.x,this.camFeet,this.face,this.look),oy=this.sy;
+    this.sx=clamp(smoothDamp(this.sx,t.x,this.v,'x',.12,dt),0,Math.max(0,this.level.width-W));
+    let y=smoothDamp(this.sy,t.y,this.v,'y',t.y>this.sy&&p.vy>150?.14:.3,dt);
     // Keep the head below the HUD band (y125) and the feet 45px above the bottom edge.
     const safe=clamp(y,feet-(H-45),p.top-125);if(safe!==y){y=safe;this.v.y=(y-oy)/dt;}
-    c.scrollY=clamp(y,0,Math.max(0,this.level.height-H));
+    this.sy=clamp(y,0,Math.max(0,this.level.height-H));
     // Near the portal the view zooms in up to +8% (planning editor goal approach).
-    this.zoom+=(goalNear-this.zoom)*Math.min(1,dt*5);c.setZoom(1+.08*this.zoom);
+    this.zoom+=(goalNear-this.zoom)*Math.min(1,dt*5);this.apply();
   }
 }

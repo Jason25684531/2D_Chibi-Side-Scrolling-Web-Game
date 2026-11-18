@@ -111,7 +111,7 @@ test('P1: stick up / down jumps between the card row and the BACK / NEXT row ins
   await tap(page,14);expect(await focused(page)).toMatch(/^character-/); // left / right stay within the cards
   await tap(page,13);expect(await focused(page)).toMatch(/^(prev|ready)$/); // one move down: straight to the step buttons
   await tap(page,13);expect(await focused(page)).toMatch(/^(prev|ready)$/); // nothing below: stays
-  await page.locator('[data-action=character-a]').focus();await tap(page,13);await expect(page.locator('[data-action=prev]')).toBeFocused(); // the closest one underneath
+  await page.locator('[data-action=character-S2AM]').focus();await tap(page,13);await expect(page.locator('[data-action=prev]')).toBeFocused(); // the closest one underneath
   await page.locator('[data-action=character-custom]').focus();await tap(page,13);expect(await focused(page)).toMatch(/^(prev|ready)$/);
   // Buttons still work while the page has lost focus (camera prompt, address bar): a stick cannot click to refocus.
   await page.evaluate(()=>{Object.defineProperty(document,'hasFocus',{value:()=>false});});
