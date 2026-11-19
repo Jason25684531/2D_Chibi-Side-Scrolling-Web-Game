@@ -145,14 +145,3 @@ test('one failed art file does not lock the station: P3 and P4 still start',asyn
   await expect(page.locator('[data-screen=P4]')).toBeVisible({timeout:6000});
   expect(warnings.some(w=>w.includes('[preload] failed'))).toBe(true);
 });
-
-test('the attract video is not rebuilt when the TOP 20 page flips',async({page})=>{
-  await page.addInitScript(key=>localStorage.setItem(key,JSON.stringify({schemaVersion:1,records:Array.from({length:12},(_,i)=>({runId:`a-${i}`,nickname:'Player '+i,score:1000-i,tier:'120',titles:[],characterId:'a'}))})),'rog-future-gamer.records.v1');
-  await page.goto('/');await page.waitForFunction(()=>!!(window as any).__station);
-  await page.evaluate(()=>{(window as any).__station.idleSince=performance.now()-60001;});
-  await expect(page.locator('video.attract')).toHaveCount(1);
-  const video=await page.locator('video.attract').elementHandle();
-  await page.evaluate(()=>{(window as any).__station.entered=performance.now()-10100;});await page.waitForTimeout(300);
-  expect(await video!.evaluate(v=>v.isConnected)).toBe(true);
-  await page.keyboard.press('ArrowRight');await expect(page.locator('.top20 .rank-row b').first()).toHaveText('11');
-});

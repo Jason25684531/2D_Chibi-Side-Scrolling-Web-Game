@@ -19,7 +19,8 @@ export const statRow=(ic:string,zh:string,en:string,value:unknown,cls='',extra='
 /** variant: '' secondary | primary | ghost. Same markup and CSS on every screen. */
 export const button=(id:string,zh:string,en:string,disabled=false,variant='',ic='')=>`<button class="btn ${variant}" data-action="${id}" ${disabled?'disabled':''}>${icon(ic)}<span><strong>${zh}</strong><small>${en}</small></span></button>`;
 export const chip=(html:string,dot='')=>`<span class="chip">${dot?`<i class="${dot}"></i>`:''}${html}</span>`;
-export const titleTag=(text:string)=>`<span class="title-badge">${escape(text)}<small>TITLE</small></span>`;
+/** Each title is its own span; CSS keeps the first line only, so a title that does not fit whole is dropped, never cut. */
+export const titleTag=(texts:string[])=>`<span class="title-badge"><span class="titles">${texts.map(t=>`<span>${escape(t)}</span>`).join('')}</span><small>TITLE</small></span>`;
 export const rankRow=(rank:number,r:Ranking,you:boolean)=>`<div class="rank-row ${you?'you':''}" ${you?'aria-current="true"':''}><b>${String(rank).padStart(2,'0')}</b><img src="${pose(r.characterId)}" alt=""><span title="${escape(r.nickname)}">${escape(r.nickname)}</span><em>${r.score.toLocaleString()}</em></div>`;
 export const panel=(title:string,body:string,style='')=>`<section class="panel ${style}"><h2>${title}</h2>${body}</section>`;
 export const badgeIcon=()=>`<img class="badge-icon" src="${asset('items/'+level.itemArt.badge.art)}" alt="ROG Badge">`;

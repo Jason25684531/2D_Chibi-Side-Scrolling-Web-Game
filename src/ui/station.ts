@@ -19,17 +19,19 @@ import {sfx} from '../audio/sfx';
 /** Buttons that go back a step play UI-03 (sheet: 返回上一頁／取消／重拍); every other button plays UI-02. */
 const BACK=new Set(['prev','exit','close-ranking','records-back','retake']);
 const ATTRACT_IDLE=60000;
+// Temporary main visual (PO 2026-11-19) until the final key art lands.
+const MAINVIS=new URL('./mainvis.jpg',import.meta.url).href;
 // Controls panel (system menu → 按鍵設定). Names are the W3C standard positions, shown only for a standard-mapped pad.
 const CONTROL_LABELS:Record<typeof REBINDABLE[number],string>={jump:'跳躍／選單確認',dash:'衝刺',throw:'投擲',confirm:'開始遊戲（訓練場）',back:'返回'};
 const PAD_NAMES=['✕','○','□','△','L1','R1','L2','R2','SHARE','OPTIONS','L3','R3'];
 // Never captured while binding: directions, OPTIONS, and the current back button (it cancels instead of silently swapping).
 const FIXED=['home','pause','left','right','up','down','back'] as const;
 const NAV='<span><kbd>← →</kbd>選擇</span><span><kbd>Z / ENTER</kbd>確認</span><span><kbd>BACKSPACE</kbd>返回</span><span><kbd>H</kbd>選單</span>';
-const HINTS:Record<string,string>={P0:'<span><kbd>Z / ENTER</kbd>PLAY</span><span><kbd>H</kbd>系統選單</span>',P3:'<span><kbd>← →</kbd>移動</span><span><kbd>Z</kbd>跳躍</span><span><kbd>X</kbd>衝刺</span><span><kbd>C</kbd>投擲</span><span><kbd>ENTER</kbd>開始遊戲</span><span><kbd>H</kbd>選單</span>'};
+const HINTS:Record<string,string>={P3:'<span><kbd>← →</kbd>移動</span><span><kbd>Z</kbd>跳躍</span><span><kbd>X</kbd>衝刺</span><span><kbd>C</kbd>投擲</span><span><kbd>ENTER</kbd>開始遊戲</span><span><kbd>H</kbd>選單</span>'};
 // Text wordmark only; the slashes are decoration, not the ROG eye (DESIGN.md §8.5).
 const BRAND='<div class="brand"><svg class="logo" viewBox="0 0 70 56" aria-hidden="true"><polygon points="4,8 30,8 22,48 0,48"/><polygon points="36,8 70,8 50,48 28,48" opacity=".55"/></svg><div class="wordmark">ROG<span>FUTURE GAMER</span></div>';
-/** Rarest three titles plus "+N"; no title shows 「超新星」 (planning v0.3 §3.3). */
-const titleLine=(r:GameplayResult)=>{const t=titles(r);return t.length?t.slice(0,3).join(' · ')+(t.length>3?' +'+(t.length-3):''):'超新星';};
+/** Rarest first; no title shows 「超新星」 (planning v0.3 §3.3). The badge CSS drops whatever does not fit. */
+const titleLine=(r:GameplayResult)=>{const t=titles(r);return t.length?t:['超新星'];};
 
 export class StationUI {
   flow=new GameplayStateMachine();adapter=new MockStation();inputAdapter=new InputAdapter();
@@ -133,7 +135,7 @@ export class StationUI {
     if(action==='exit')this.exit();
     if(action==='result'&&this.flow.flow==='P6')this.go('P7');
     if(action==='goal-retry'&&this.flow.flow==='P5'&&this.adapter.replayEnabled){this.go('P6');this.go('P7');this.act('replay');return;}
-    if(action==='ranking'&&['P6','P7'].includes(this.flow.flow)){if(this.flow.flow==='P6')this.go('P7');this.boardOpen=true;this.rankPage=0;this.render();return;}
+    if(action==='ranking'&&['P0','P6','P7'].includes(this.flow.flow)){if(this.flow.flow==='P6')this.go('P7');this.boardOpen=true;this.rankPage=0;this.render();return;}
     if(action==='close-ranking'){this.boardOpen=false;this.render();focus(this.ui,0,'ranking');}
     if(action.startsWith('page-')){this.rankPage=Number(action.slice(5))===1?1:0;this.render();focus(this.ui,0,action);}
     if(action==='retry-storage'){this.adapter.retryStorage();this.render();}
@@ -216,12 +218,7 @@ export class StationUI {
     if(!this.game.scene.isActive('Gameplay'))this.input(this.inputAdapter.sample(this.testPad??activePad()));
     if(this.flow.flow==='P0'&&this.adapter.current)this.go('P1');
     if(this.flow.flow==='P0'){
-      if(!this.attract&&!this.menu&&now-this.idleSince>=ATTRACT_IDLE){this.attract=true;this.render();}
-      // Wall and TOP 20 share the screen: wall scrolls on a 20 s cycle, board flips page every 10 s when there is a second page.
-      // Count only (records are unbounded); no flip under the attract video, a render would rebuild and restart it.
-      const t=now-this.entered,page=this.adapter.records.filter(r=>r.tier===String(this.tier)).length>10?Math.floor(t/10000)%2:0;
-      if(page!==this.rankPage&&!this.menu&&!this.attract){this.rankPage=page;this.render();}
-      const wall=this.ui.querySelector('.wall');if(wall)wall.scrollLeft=(t%20000/20000)*Math.max(0,wall.scrollWidth-wall.clientWidth);
+      if(!this.attract&&!this.menu&&!this.boardOpen&&now-this.idleSince>=ATTRACT_IDLE){this.attract=true;this.render();}
     }
     if(this.flow.flow==='P1'){
       const c=this.adapter.current;const b=this.ui.querySelector<HTMLButtonElement>('[data-action=ready]');
@@ -292,9 +289,11 @@ export class StationUI {
     const nickname=escape(this.adapter.current?.nickname??'PLYR'),character=this.adapter.current?.characterId??'a',who=chip(`${nickname} · ${this.tier} s`);let body='';
     switch(this.flow.flow){
       case 'P0':{
-        const wall=[...this.adapter.wall.values()],paged=this.adapter.board(this.tier).length>10;
-        // ponytail: P0 only renders with an empty queue (update() jumps to P1 otherwise), so the notice is fixed copy.
-        body=this.shell('','',`<div class="p0-title"><h1>CYBER <span>RUN</span></h1><p>電域狂奔<small>FOR THOSE WHO DARE</small></p></div><div class="wall">${wall.map((r,i)=>`<div class="wcard"><span class="idx">${String(i+1).padStart(2,'0')}</span><img src="${r.look??pose(r.characterId)}" alt=""><div class="name"><strong title="${escape(r.nickname)}">${escape(r.nickname)}</strong><span class="title">${escape(r.titles[0]??'超新星')}</span></div></div>`).join('')||'<div class="wcard empty"><p>成為下一位<br>Future Gamer<small>NEXT PLAYER WANTED</small></p></div>'}</div><section class="panel top20"><h2>TOP 20<small> / ${this.tier} 秒</small></h2>${this.ranking(true)}${paged?`<div class="page"><b>${this.rankPage+1}</b> / 2 · 每 10 秒換頁</div>`:''}</section><div class="notice"><i>i</i><div><strong>目前沒有玩家排隊，歡迎參觀 ROG FUTURE GAMER</strong><small>NO PLAYERS IN QUEUE · FEEL FREE TO EXPLORE</small></div></div><div class="demo">${button('demo','PLAY','開始遊戲',false,'primary','next')}</div>`,'standby',chip(`Replay ${this.adapter.replayEnabled?'開啟':'關閉'}`,'red'))+(this.attract?`<video class="attract" src="${'/assets/cyber-run/attract.mp4'}" autoplay muted loop playsinline aria-label="首頁待機巡覽" onerror="this.remove()"></video>`:'');break;
+        // UX v0.4 UC01-1: main visual and two buttons only. LEADERBOARD opens the same board as P7 (UC01-2).
+        body=this.boardOpen?this.shell('榮耀排行榜','TOP 20 · LOCAL RECORDS',this.leaderboard()+`<div class="actions">${button('close-ranking','返回首頁','BACK',false,'','exit')}</div>`,'board-screen')
+          :`<div class="screen standby" data-screen="P0"><img class="mainvis" src="${MAINVIS}" alt="ROG FUTURE GAMER"><div class="home-actions">${button('demo','開始遊戲','START',false,'primary','next')}${button('ranking','排行榜','LEADERBOARD',false,'','list')}</div></div>`;
+        if(this.attract)body+=`<video class="attract" src="${'/assets/cyber-run/attract.mp4'}" autoplay muted loop playsinline aria-label="首頁待機巡覽" onerror="this.remove()"></video>`;
+        break;
       }
       case 'P1':{const r=readiness(this.adapter.current,this.step,this.camError,this.comfy);body=this.shell('','',r.html,r.classes,chip(`<span id="readiness">${genText(this.adapter.current)}</span>`,'red'));break;}
       case 'P3':{
@@ -308,7 +307,7 @@ export class StationUI {
         const r=this.result,goal=r?.endReason==='goal';
         // NEW RECORD above the best other run on this board, or the first run on an empty board (PO 2026-11-04); P6 does not repeat it.
         const best=r?this.adapter.board(this.tier).find(x=>x.runId!==r.runId)?.score:undefined,record=!!r&&(best===undefined||r.score>best);
-        body=this.shell('實驗室 LABORATORY STAGE','SIDE SCROLLING MISSION',`<div class="goal-burst"></div><img class="goal-art" src="${skinOf(this.adapter.current).poses[goal?'jump':'idle']}" alt=""><h1 class="goal-title">${goal?'GOAL!':'TIME UP'}</h1><div class="goal-sub"><h2>${goal?'任務完成！':'時間到！'}</h2><small>${goal?'MISSION CLEAR':'CHALLENGE OVER'}</small></div>${panel('本次成績<small>MISSION REPORT</small>',statRow('star','分數','SCORE',(r?.score??0).toLocaleString(),'gold')+statRow('clock',goal?'通關時間':'遊玩時間',goal?'CLEAR TIME':'PLAY TIME',time(r?r.duration-r.remainingTime:0),'',record?'<span class="tag">NEW RECORD</span>':'')+statRow('badge','持有徽章','BADGES HELD',r?.heldBadgeCount??0,'',`<small> / ${this.scene?.level?.badges.length??'—'}</small>`)+statRow('combo','最高連擊','MAX COMBO',r?.playerStatistics.maxCombo??0)+`<div class="report-title">${titleTag((r&&titles(r)[0])||'超新星')}</div><div class="foot"><span>即將進入本場結果 · ${goal?5:3} 秒</span><small>AUTO →</small></div>`,'report')}<div class="actions">${button('goal-retry','再挑戰','RETRY',!this.adapter.replayEnabled,'','retry')}${button('next-stage','下一關','COMING SOON',true,'','next')}${button('exit','返回選單','BACK TO MENU',false,'primary','home')}</div>`,`mission ${goal?'goal':'time-up'}`,who);break;
+        body=this.shell('實驗室 LABORATORY STAGE','SIDE SCROLLING MISSION',`<div class="goal-burst"></div><img class="goal-art" src="${skinOf(this.adapter.current).poses[goal?'jump':'idle']}" alt=""><h1 class="goal-title">${goal?'GOAL!':'TIME UP'}</h1><div class="goal-sub"><h2>${goal?'任務完成！':'時間到！'}</h2><small>${goal?'MISSION CLEAR':'CHALLENGE OVER'}</small></div>${panel('本次成績<small>MISSION REPORT</small>',statRow('star','分數','SCORE',(r?.score??0).toLocaleString(),'gold')+statRow('clock',goal?'通關時間':'遊玩時間',goal?'CLEAR TIME':'PLAY TIME',time(r?r.duration-r.remainingTime:0),'',record?'<span class="tag">NEW RECORD</span>':'')+statRow('badge','持有徽章','BADGES HELD',r?.heldBadgeCount??0,'',`<small> / ${this.scene?.level?.badges.length??'—'}</small>`)+statRow('combo','最高連擊','MAX COMBO',r?.playerStatistics.maxCombo??0)+`<div class="report-title">${titleTag([(r&&titles(r)[0])||'超新星'])}</div><div class="foot"><span>即將進入本場結果 · ${goal?5:3} 秒</span><small>AUTO →</small></div>`,'report')}<div class="actions">${button('goal-retry','再挑戰','RETRY',!this.adapter.replayEnabled,'','retry')}${button('next-stage','下一關','COMING SOON',true,'','next')}${button('exit','返回選單','BACK TO MENU',false,'primary','home')}</div>`,`mission ${goal?'goal':'time-up'}`,who);break;
       }
       case 'P6':{
         const r=this.result!,st=r.playerStatistics,goal=r.endReason==='goal';

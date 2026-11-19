@@ -1,6 +1,7 @@
 import {it,expect,vi} from 'vitest';
 import {InputAdapter} from '../../src/input/adapter';
-import {escape,button,time} from '../../src/ui/components';
+import {escape,button,time,titleTag} from '../../src/ui/components';
+import {readiness} from '../../src/ui/readiness';
 import {MockStation,titles,validRanking,WALL_MAX} from '../../src/ui/mock-station';
 import {GameplaySession} from '../../src/core/session';
 it('escapes untrusted identity, supplies native disabled controls and formats timer',()=>{
@@ -40,4 +41,13 @@ it('keeps the newest WALL_MAX players on the wall and lets the operator reset un
     b.clear();b.enqueue('After');const s=new GameplaySession(100,b.current.sessionId);s.tick(100);b.save(s.finish('time-up')!);
     expect(b.storageStatus).toBe('ready');expect(JSON.parse(store.get('rog-future-gamer.records.v1')!).records).toHaveLength(1);
   }finally{vi.unstubAllGlobals();}
+});
+it('photo and nickname are separate pages: neither carries the other control',()=>{
+  const c={sessionId:'s',nickname:'PLYR0001',characterId:'S1WM',attackItem:'',custom:true,generation:{state:'none'}} as any;
+  const photo=readiness(c,1).html,nick=readiness(c,3).html;
+  expect(photo).toContain('video class="live"');expect(photo).not.toContain('id="nickname"');expect(photo).not.toContain('class="keypad"');
+  expect(nick).toContain('id="nickname"');expect(nick).not.toContain('video');
+});
+it('titleTag renders every title as its own span so CSS can drop the ones that do not fit',()=>{
+  expect(titleTag(['A','<B>'])).toBe('<span class="title-badge"><span class="titles"><span>A</span><span>&lt;B&gt;</span></span><small>TITLE</small></span>');
 });

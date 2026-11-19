@@ -66,7 +66,7 @@ test('M6 full keyboard Goal flow, screenshots, result wait, replay resets and qu
   const paused=await page.evaluate(()=>(window as any).__gameplay.run.remaining);await page.waitForTimeout(200);expect(await page.evaluate(()=>(window as any).__gameplay.run.remaining)).toBe(paused);
   await page.keyboard.press('ArrowLeft');await expect(page.locator('.modal [data-action=controls]')).toBeFocused();await page.keyboard.press('ArrowLeft');await expect(page.locator('.modal [data-action=exit]')).toBeFocused();await page.keyboard.press('Enter');
   await expect(page.locator('[data-screen=P0]')).toBeVisible();expect(await page.evaluate(()=>(window as any).__station.adapter.queue.length)).toBe(0);
-  await expect(page.locator('[data-screen=P0] .wall')).toBeVisible();await expect(page.getByRole('heading',{name:'TOP 20 / 120 秒'})).toBeVisible();
+  await expect(page.locator('[data-screen=P0] .mainvis')).toBeVisible();
   await page.screenshot({path:'docs/evidence/uiux-screens/P0-ranking.png'});
   expect(errors).toEqual([]);expect(external).toEqual([]);
 });
@@ -88,7 +88,7 @@ test('Time Up presentation, simulated pad through three steps and once-only resu
   expect(await page.evaluate(()=>{const u=(window as any).__station;u.adapter.save(u.result);return{count:u.adapter.records.length,tier:u.result.timeTier,goal:u.result.scoreBreakdown.goal};})).toEqual({count:1,tier:'120',goal:0});
 });
 test('split CTA: BACK steps back, then leaves the queue from step 1; PLAY re-enters with NEXT focused',async({page})=>{
-  await page.goto('/');await expect(page.locator('[data-action=demo]')).toContainText('PLAY');
+  await page.goto('/');await expect(page.locator('[data-action=demo]')).toContainText('開始遊戲');
   await page.keyboard.press('Enter');await expect(page.locator('[data-action=ready]')).toBeFocused();
   await page.keyboard.press('Enter');await expect(page.locator('.item-card')).toHaveCount(5);await expect(page.locator('[data-action=ready]')).toBeFocused();
   await page.keyboard.press('ArrowLeft');await expect(page.locator('[data-action=prev]')).toBeFocused();await page.keyboard.press('Enter');
@@ -106,29 +106,37 @@ test('window blur during a station run opens the system menu instead of a silent
   expect(await page.evaluate(()=>(window as any).__gameplay.run.phase)).toBe('paused');
 });
 
-test('P0 shows the wall and TOP 20 together; the board flips page every 10 s',async({page})=>{
+test('home keeps only the main visual, START and LEADERBOARD; the board opens and Back returns focus',async({page})=>{
   await page.addInitScript(key=>localStorage.setItem(key,JSON.stringify({schemaVersion:1,records:Array.from({length:12},(_,i)=>({runId:`w-${i}`,nickname:'Player '+i,score:1000-i,tier:'120',titles:[],characterId:'a'}))})),'rog-future-gamer.records.v1');
-  await page.goto('/');await expect(page.locator('[data-screen=P0] .wcard.empty')).toContainText('成為下一位');
-  await expect(page.getByRole('heading',{name:'TOP 20 / 120 秒'})).toBeVisible();await expect(page.locator('.top20 .rank-row')).toHaveCount(10);
-  await page.evaluate(()=>{(window as any).__station.entered=performance.now()-10100;});
-  await expect(page.locator('.top20 .rank-row')).toHaveCount(2);await expect(page.locator('.top20 .rank-row b').first()).toHaveText('11');
-  await expect(page.locator('[data-screen=P0] .wall')).toBeVisible();
-  await page.evaluate(()=>{(window as any).__station.entered=performance.now()-20100;});
-  await expect(page.locator('.top20 .rank-row b').first()).toHaveText('01');
+  await page.goto('/');await expect(page.locator('[data-screen=P0] .mainvis')).toBeVisible();
+  await expect(page.locator('[data-screen=P0] button')).toHaveCount(2);await expect(page.locator('[data-action=demo]')).toBeFocused();
+  for(const gone of ['.wall','.top20','.notice','.p0-title','.brand','.hints'])await expect(page.locator('[data-screen=P0] '+gone)).toHaveCount(0);
+  await page.keyboard.press('ArrowRight');await expect(page.locator('[data-action=ranking]')).toBeFocused();await page.keyboard.press('Enter');
+  await expect(page.getByRole('heading',{name:'TOP 20 / 120 秒'})).toBeVisible();await expect(page.locator('.full-ranking .rank-row')).toHaveCount(10);
+  await page.keyboard.press('Backspace');await expect(page.locator('[data-screen=P0] .mainvis')).toBeVisible();await expect(page.locator('[data-action=ranking]')).toBeFocused();
+});
+test('result titles that do not fit are dropped whole, never clipped',async({page})=>{
+  await page.goto('/');await page.waitForFunction(()=>!!(window as any).__station?.game.registry.get('assetsReady'));
+  await page.evaluate(()=>{const u=(window as any).__station;u.adapter.enqueue();u.go('P1');u.go('P2');u.go('P3');u.go('P4');u.start();});
+  await page.waitForFunction(()=>(window as any).__gameplay?.body?.blocked.down);
+  await page.evaluate(()=>{const u=(window as any).__station,r=u.scene.session.finish('goal');u.result={...r,playerStatistics:{...r.playerStatistics,maxCombo:9,bolts:9,stomps:9,bounces:9}};u.go('P5');u.go('P6');});
+  const spans=await page.evaluate(()=>{const c=document.querySelector('.verdict .titles')!.getBoundingClientRect();return [...document.querySelectorAll('.verdict .titles span')].map(s=>{const r=s.getBoundingClientRect();return {shown:r.top<c.bottom-1,whole:r.left>=c.left-1&&r.right<=c.right+1};});});
+  expect(spans.length).toBeGreaterThan(3);expect(spans.filter(s=>s.shown).length).toBeGreaterThan(0);expect(spans.filter(s=>s.shown).length).toBeLessThan(spans.length);
+  expect(spans.filter(s=>s.shown).every(s=>s.whole)).toBe(true);
 });
 test('operator time setting cycles in the P0 system menu, re-labels the board and survives a reload',async({page})=>{
-  await page.goto('/');await expect(page.getByRole('heading',{name:'TOP 20 / 120 秒'})).toBeVisible();
+  await page.goto('/');await page.locator('[data-action=ranking]').click();await expect(page.getByRole('heading',{name:'TOP 20 / 120 秒'})).toBeVisible();await page.locator('[data-action=close-ranking]').click();
   await page.keyboard.press('KeyH');await page.locator('[data-action=settings-time]').click();
   await expect(page.locator('[data-action=settings-time]')).toContainText('遊戲時間：60 秒');
-  await page.keyboard.press('Backspace');await expect(page.getByRole('heading',{name:'TOP 20 / 60 秒'})).toBeVisible();
-  await page.reload();await expect(page.getByRole('heading',{name:'TOP 20 / 60 秒'})).toBeVisible();
+  await page.keyboard.press('Backspace');await page.locator('[data-action=ranking]').click();await expect(page.getByRole('heading',{name:'TOP 20 / 60 秒'})).toBeVisible();
+  await page.reload();await page.locator('[data-action=ranking]').click();await expect(page.getByRole('heading',{name:'TOP 20 / 60 秒'})).toBeVisible();
   await page.evaluate(()=>{const u=(window as any).__station;u.adapter.enqueue();u.go('P1');u.go('P2');u.go('P3');u.go('P4');u.start();});
   await page.waitForFunction(()=>(window as any).__gameplay?.run?.duration===60);
 });
 test('replay stays on by default; operator can turn it off, and the setting survives a reload',async({page})=>{
-  await page.goto('/');await expect(page.locator('.chip').first()).toContainText('Replay 開啟');
-  await page.keyboard.press('KeyH');await page.locator('[data-action=settings-replay]').click();await expect(page.locator('[data-action=settings-replay]')).toContainText('關閉');
-  await page.reload();await expect(page.locator('.chip').first()).toContainText('Replay 關閉');
+  await page.goto('/');await page.keyboard.press('KeyH');await expect(page.locator('[data-action=settings-replay]')).toContainText('開啟');
+  await page.locator('[data-action=settings-replay]').click();await expect(page.locator('[data-action=settings-replay]')).toContainText('關閉');
+  await page.reload();await page.keyboard.press('KeyH');await expect(page.locator('[data-action=settings-replay]')).toContainText('關閉');
 });
 test('records panel: delete one row and reset all, each only on the second press',async({page})=>{
   await page.addInitScript(key=>{if(!localStorage.getItem(key))localStorage.setItem(key,JSON.stringify({schemaVersion:1,records:[0,1,2].map(i=>({runId:`r-${i}`,nickname:'P'+i,score:300-i,tier:'120',titles:[],completedAt:'2026-11-04T10:00:00Z'}))}));},'rog-future-gamer.records.v1');
@@ -141,7 +149,7 @@ test('records panel: delete one row and reset all, each only on the second press
   await page.locator('[data-action=clear-records]').click();await page.locator('[data-action=clear-records]').click();
   await expect(page.locator('.records .empty-state')).toBeVisible();
   await page.keyboard.press('Backspace');await expect(page.locator('[data-action=records]')).toBeFocused();
-  await page.reload();await expect(page.locator('.top20 .empty-state')).toBeVisible();
+  await page.reload();await page.locator('[data-action=ranking]').click();await expect(page.locator('.ranking .empty-state')).toBeVisible();
 });
 
 test('nickname keypad: the stick reaches it, the first key replaces the default name, delete and the 8-character cap work',async({page})=>{
