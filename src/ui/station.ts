@@ -275,6 +275,7 @@ export class StationUI {
   ranking(full=false,tier=this.tier){
     const rows=this.adapter.board(tier),mine=rows.findIndex(r=>r.runId===this.result?.runId);
     const indices=full?Array.from({length:Math.max(0,Math.min(10,Math.min(rows.length,20)-this.rankPage*10))},(_,i)=>i+this.rankPage*10):[...new Set([0,1,2,3,4,...(mine>=0?[mine-1,mine,mine+1]:[])])].filter(i=>i>=0&&i<rows.length).sort((a,b)=>a-b);
+    for(let n=indices.length;n--;)if(!rows[indices[n]])indices.splice(n,1); // ponytail: a stale rankPage must never throw inside the poststep render
     const status=this.adapter.storageStatus==='loading'?'<p role="status">載入本機成績中…</p>':this.adapter.storageStatus==='error'?`<div class="storage-error" role="alert">${escape(this.adapter.storageError)}${button('retry-storage','重試保存','RETRY')}</div>`:'';
     return `${status}<div class="ranking ${full?'full-ranking':''}">${indices.map(i=>rankRow(i+1,rows[i],rows[i].runId===this.result?.runId)).join('')||(this.adapter.storageStatus==='ready'?'<p class="empty-state">尚無成績<br><small>完成挑戰，留下你的第一筆紀錄。</small></p>':'')}</div>`;
   }
