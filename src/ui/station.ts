@@ -11,7 +11,7 @@ import {probe,generate,drop} from '../comfy/client';
 import type {RoleCode} from '../comfy/skin';
 import {MockStation,titles,savedTier,saveTier,type Identity} from './mock-station';
 import {avatar,button,panel,escape,focus,focusY,text,time,chip,statRow,titleTag,rankRow} from './components';
-import {readiness,readinessSteps,readyLabel,needsPhoto,willSubmit,skinOf,genText} from './readiness';
+import {readiness,readinessSteps,readyLabel,onPhoto,willSubmit,skinOf,genText} from './readiness';
 import {openCamera,closeCamera,cameraError,capturePhoto} from './camera';
 import './station.css';
 import {hud,updateHud} from './hud';
@@ -20,7 +20,8 @@ import {sfx} from '../audio/sfx';
 const BACK=new Set(['prev','exit','close-ranking','records-back','retake']);
 const ATTRACT_IDLE=60000;
 // Temporary main visual (PO 2026-11-19) until the final key art lands.
-const MAINVIS=new URL('./mainvis.jpg',import.meta.url).href;
+const MAINVIS=new URL('./cyber-runner.webp',import.meta.url).href;
+const HOME_HERO=new URL('./cyber-runner-hero.webp',import.meta.url).href;
 // Controls panel (system menu → 按鍵設定). Names are the W3C standard positions, shown only for a standard-mapped pad.
 const CONTROL_LABELS:Record<typeof REBINDABLE[number],string>={jump:'跳躍／選單確認',dash:'衝刺',throw:'投擲',confirm:'開始遊戲（訓練場）',back:'返回'};
 const PAD_NAMES=['✕','○','□','△','L1','R1','L2','R2','SHARE','OPTIONS','L3','R3'];
@@ -46,7 +47,7 @@ export class StationUI {
   controls=false;binding:''|typeof REBINDABLE[number]='';private bindPrev:boolean[]|null=null;private bindAt=0;
   /** Live camera for the P1 photo step; render() opens and closes it. */
   private stream:Promise<MediaStream>|null=null;camError='';
-  /** ComfyUI reachable with a staged workflow; undefined while the customize step is checking. */
+  /** ComfyUI reachable with a staged workflow: probed at boot and on every P1 entry; undefined only before the first answer. */
   comfy:boolean|undefined;
   constructor(readonly game:Phaser.Game){
     document.body.classList.add('station');
@@ -62,6 +63,9 @@ export class StationUI {
       if(event.target instanceof HTMLInputElement)for(const a of [this.inputAdapter,this.scene.inputAdapter]){a?.codes.clear();a?.previous.clear();a?.clear();}
     });
     this.ui.addEventListener('keydown',event=>{
+      if((event.target as HTMLElement).closest('.home-actions')&&['ArrowUp','ArrowDown'].includes(event.key)){
+        event.preventDefault();event.stopPropagation();focus(this.ui,event.key==='ArrowDown'?1:-1);return;
+      }
       if(event.key!=='Tab')return;
       const scope=this.ui.querySelector('.modal.screen')??this.ui;
       const nodes=Array.from(scope.querySelectorAll<HTMLElement>('button:not(:disabled),input:not(:disabled)'));
@@ -72,7 +76,7 @@ export class StationUI {
     const resize=()=>{this.root.style.transform=`translate(-50%,-50%) scale(${Math.min(innerWidth/1920,innerHeight/1080)})`;};resize();window.addEventListener('resize',resize);
     game.events.on('poststep',this.update,this);
     game.events.once('destroy',()=>{this.inputAdapter.dispose();window.removeEventListener('resize',resize);game.events.off('poststep',this.update,this);});
-    this.render();(window as any).__station=this;
+    this.render();this.checkComfy();(window as any).__station=this;
   }
   get scene(){return this.game.scene.getScene('Gameplay') as GameplayScene;}
   /** The pad feeding whichever adapter is live (the scene's during a run). */
@@ -84,29 +88,34 @@ export class StationUI {
     if(this.game.scene.isActive('Gameplay'))this.scene.scene.restart(data);else this.game.scene.start('Gameplay',data);
   }
   stop(){if(this.game.scene.isActive('Gameplay'))this.game.scene.stop('Gameplay');this.inputAdapter.attach();}
-  exit(){this.menu=false;this.stop();if(this.adapter.current)this.dropPhoto(this.adapter.current);this.adapter.exit();this.go('P0');if(this.adapter.current)this.go('P1');}
+  exit(finish=false){
+    const player=this.adapter.current;
+    if(player?.captureStarted&&!(finish&&this.flow.flow==='P7'))return;
+    this.menu=false;this.stop();if(player)this.dropPhoto(player);this.adapter.exit();
+    if(player?.captureStarted){
+      if(!this.adapter.current)this.adapter.enqueue();
+      this.go('P1');return;
+    }
+    this.go('P0');if(this.adapter.current)this.go('P1');
+  }
   /** Any input on P0 resets the idle clock and closes the attract video. Returns true when it closed the video. */
   wake(){this.idleSince=performance.now();if(!this.attract)return false;this.attract=false;this.render();return true;}
   act(action:string){
     if(this.countdownAt&&this.flow.flow==='P7'&&!this.menu)return;
     if(action==='demo'&&this.flow.flow==='P0'){this.adapter.enqueue();this.go('P1');}
+    if(action==='settings'&&this.flow.flow==='P0'){this.returnFocus='settings';this.menu=true;this.render();return;}
     const c=this.adapter.current;
     if(action.startsWith('character-')&&this.flow.flow==='P1'&&c){
-      // Step 1: a preset card or CUSTOM. Photo step: the body cards pick the ComfyUI template.
-      const id=action.slice(10);
-      if(id==='custom'){if(this.step===0){c.custom=true;this.camError='';}}
-      else if(characterIds.includes(id as RoleCode)){
-        if(id!==c.characterId){this.dropGeneration(c);c.characterId=id as RoleCode;} // the template changed: a job for the old one is useless
-        if(this.step===0&&c.custom){c.custom=false;this.dropPhoto(c);}
-      }
-      else return;
+      // The body is also the ComfyUI template: a job for the old one is useless, the photo is kept for the new one.
+      const id=action.slice(10);if(!characterIds.includes(id as RoleCode))return;
+      if(id!==c.characterId){this.dropGeneration(c);c.characterId=id as RoleCode;}
       this.render();focus(this.ui,0,action);return;
     }
     if(action==='shoot'&&this.flow.flow==='P1'&&c){
       const video=this.ui.querySelector<HTMLVideoElement>('video.live');if(!video?.videoWidth)return;
       void capturePhoto(video).then(url=>{
-        if(this.adapter.current!==c||!c.custom||c.photo){URL.revokeObjectURL(url);return;} // a second press, or the player moved on
-        c.photo=url;this.render();focus(this.ui,0,'ready');
+        if(this.adapter.current!==c||!onPhoto(c,this.step,this.comfy)||c.photo){URL.revokeObjectURL(url);return;} // a second press, or the player moved on
+        c.photo=url;c.captureStarted=true;this.render();focus(this.ui,0,'ready');
       },error=>{this.camError=cameraError(error);this.render();});
       return;
     }
@@ -118,13 +127,14 @@ export class StationUI {
       return;
     }
     if(action.startsWith('item-')&&this.flow.flow==='P1'){const item=ATTACK_ITEMS[Number(action.slice(5))];if(item){c.attackItem=item.src;this.render();focus(this.ui,0,action);}return;}
-    if(action==='ready'&&this.flow.flow==='P1'&&c&&!needsPhoto(c,this.step)){
+    if(this.flow.flow==='P1'&&c&&(action==='ready'||action==='skip-nickname'&&this.step===readinessSteps(c,this.comfy).length-1)){
       this.camError='';
       // Generation runs in the background through the remaining steps and the P3 sandbox.
-      if(willSubmit(c,this.step))void generate(c,c.photo!,c.characterId,skin=>addSheets(this.game.textures,skin),skin=>removeSheets(this.game.textures,skin));
-      if(this.step<readinessSteps(c).length-1){this.setStep(this.step+1);return;}
+      if(willSubmit(c,this.step,this.comfy))void generate(c,c.photo!,c.characterId,skin=>addSheets(this.game.textures,skin),skin=>removeSheets(this.game.textures,skin));
+      if(this.step<readinessSteps(c,this.comfy).length-1){this.setStep(this.step+1);return;}
       // UC04-1: 8 characters; P2 has no screen any more (single 100 s run).
-      c.nickname=c.nickname.trim().slice(0,8)||c.nickname;this.go('P2');this.go('P3');if(this.game.registry.get('assetsReady'))this.start(true);
+      c.nickname=(action==='skip-nickname'?c.defaultNickname:c.nickname.trim()||c.defaultNickname).slice(0,8);
+      this.go('P2');this.go('P3');if(this.game.registry.get('assetsReady'))this.start(true);
     }
     // P3 has no time limit (PO 2026-11-04): the player starts the 3-2-1 once the slice is running.
     if(action==='start-game'&&this.flow.flow==='P3'&&!this.countdownAt&&this.game.registry.get('assetsReady')&&this.game.scene.isActive('Gameplay')&&c?.generation.state!=='generating'){
@@ -133,6 +143,7 @@ export class StationUI {
     if(action==='continue'){this.menu=false;this.scene.run?.resume();this.scene.fixed?.reset();this.render();focus(this.ui,0,this.returnFocus);}
     if(action==='restart'&&this.flow.flow==='P4'){this.menu=false;this.start();this.render();}
     if(action==='exit')this.exit();
+    if(action==='next-player'&&this.flow.flow==='P7')this.exit(true);
     if(action==='result'&&this.flow.flow==='P6')this.go('P7');
     if(action==='goal-retry'&&this.flow.flow==='P5'&&this.adapter.replayEnabled){this.go('P6');this.go('P7');this.act('replay');return;}
     if(action==='ranking'&&['P0','P6','P7'].includes(this.flow.flow)){if(this.flow.flow==='P6')this.go('P7');this.boardOpen=true;this.rankPage=0;this.render();return;}
@@ -156,14 +167,15 @@ export class StationUI {
   /** Cancel this player's ComfyUI job; a delivered skin's textures go once the scene using them has shut down. */
   private dropGeneration(c:Identity){const g=drop(c);if(g.state==='ready')this.game.events.once('poststep',()=>removeSheets(this.game.textures,g.skin));}
   private dropPhoto(c:Identity){this.dropGeneration(c);if(c.photo)URL.revokeObjectURL(c.photo);c.photo=undefined;}
-  /** Step 1 shows whether the CUSTOM card can be used: ComfyUI answering and the workflow staged. */
+  /** The photo step exists only while ComfyUI answers with the workflow staged; the last answer stands while a re-check runs. */
   private checkComfy(){
-    this.comfy=undefined;
     void probe().then(ok=>{
       this.comfy=ok;const c=this.adapter.current;
-      if(!ok&&c?.custom&&c.generation.state==='none'){c.custom=false;this.dropPhoto(c);if(this.flow.flow==='P1')this.step=0;} // the photo step is gone: back to the character cards
+      if(!ok&&c?.photo&&c.generation.state==='none')this.dropPhoto(c);
+      if(this.flow.flow!=='P1')return;
+      if(!ok&&this.step>1&&!c?.photo)this.step--; // a fast player already past the vanished photo step stays on the same screen
       // Keep whatever the player moved focus to while the probe was in flight.
-      if(this.flow.flow==='P1'&&this.step===0){const at=(document.activeElement as HTMLElement)?.dataset.action;this.render();focus(this.ui,0,at);}
+      const at=(document.activeElement as HTMLElement)?.dataset.action;this.render();focus(this.ui,0,at);
     });
   }
   private setStep(step:number){
@@ -221,8 +233,7 @@ export class StationUI {
       if(!this.attract&&!this.menu&&!this.boardOpen&&now-this.idleSince>=ATTRACT_IDLE){this.attract=true;this.render();}
     }
     if(this.flow.flow==='P1'){
-      const c=this.adapter.current;const b=this.ui.querySelector<HTMLButtonElement>('[data-action=ready]');
-      if(b){const wasDisabled=b.disabled;b.disabled=needsPhoto(c,this.step);if(wasDisabled&&!b.disabled&&!this.menu)b.focus();}text(this.ui,'readiness',genText(c));text(this.ui,'ready-label',readyLabel(c,this.step));
+      const c=this.adapter.current;text(this.ui,'readiness',genText(c));text(this.ui,'ready-label',readyLabel(c,this.step,this.comfy));
     }
     if(this.flow.flow==='P3'&&!this.menu){
       const loaded=this.game.registry.get('assetsReady');
@@ -291,7 +302,7 @@ export class StationUI {
       case 'P0':{
         // UX v0.4 UC01-1: main visual and two buttons only. LEADERBOARD opens the same board as P7 (UC01-2).
         body=this.boardOpen?this.shell('榮耀排行榜','TOP 20 · LOCAL RECORDS',this.leaderboard()+`<div class="actions">${button('close-ranking','返回首頁','BACK',false,'','exit')}</div>`,'board-screen')
-          :`<div class="screen standby" data-screen="P0"><img class="mainvis" src="${MAINVIS}" alt="ROG FUTURE GAMER"><div class="home-actions">${button('demo','開始遊戲','START',false,'primary','next')}${button('ranking','排行榜','LEADERBOARD',false,'','list')}</div></div>`;
+          :`<div class="screen standby" data-screen="P0"><img class="mainvis" src="${MAINVIS}" alt="ROG CYBER RUNNER — FOR THOSE WHO DARE"><img class="home-hero" src="${HOME_HERO}" alt=""><div class="home-actions">${button('demo','開始遊戲','START',false,'primary','next')}${button('ranking','排行榜','LEADERBOARD',false,'','list')}${button('settings','設定','SETTINGS',false,'','list')}</div></div>`;
         if(this.attract)body+=`<video class="attract" src="${'/assets/cyber-run/attract.mp4'}" autoplay muted loop playsinline aria-label="首頁待機巡覽" onerror="this.remove()"></video>`;
         break;
       }
@@ -307,7 +318,7 @@ export class StationUI {
         const r=this.result,goal=r?.endReason==='goal';
         // NEW RECORD above the best other run on this board, or the first run on an empty board (PO 2026-11-04); P6 does not repeat it.
         const best=r?this.adapter.board(this.tier).find(x=>x.runId!==r.runId)?.score:undefined,record=!!r&&(best===undefined||r.score>best);
-        body=this.shell('實驗室 LABORATORY STAGE','SIDE SCROLLING MISSION',`<div class="goal-burst"></div><img class="goal-art" src="${skinOf(this.adapter.current).poses[goal?'jump':'idle']}" alt=""><h1 class="goal-title">${goal?'GOAL!':'TIME UP'}</h1><div class="goal-sub"><h2>${goal?'任務完成！':'時間到！'}</h2><small>${goal?'MISSION CLEAR':'CHALLENGE OVER'}</small></div>${panel('本次成績<small>MISSION REPORT</small>',statRow('star','分數','SCORE',(r?.score??0).toLocaleString(),'gold')+statRow('clock',goal?'通關時間':'遊玩時間',goal?'CLEAR TIME':'PLAY TIME',time(r?r.duration-r.remainingTime:0),'',record?'<span class="tag">NEW RECORD</span>':'')+statRow('badge','持有徽章','BADGES HELD',r?.heldBadgeCount??0,'',`<small> / ${this.scene?.level?.badges.length??'—'}</small>`)+statRow('combo','最高連擊','MAX COMBO',r?.playerStatistics.maxCombo??0)+`<div class="report-title">${titleTag([(r&&titles(r)[0])||'超新星'])}</div><div class="foot"><span>即將進入本場結果 · ${goal?5:3} 秒</span><small>AUTO →</small></div>`,'report')}<div class="actions">${button('goal-retry','再挑戰','RETRY',!this.adapter.replayEnabled,'','retry')}${button('next-stage','下一關','COMING SOON',true,'','next')}${button('exit','返回選單','BACK TO MENU',false,'primary','home')}</div>`,`mission ${goal?'goal':'time-up'}`,who);break;
+        body=this.shell('實驗室 LABORATORY STAGE','SIDE SCROLLING MISSION',`<div class="goal-burst"></div><img class="goal-art" src="${skinOf(this.adapter.current).poses[goal?'jump':'idle']}" alt=""><h1 class="goal-title">${goal?'GOAL!':'TIME UP'}</h1><div class="goal-sub"><h2>${goal?'任務完成！':'時間到！'}</h2><small>${goal?'MISSION CLEAR':'CHALLENGE OVER'}</small></div>${panel('本次成績<small>MISSION REPORT</small>',statRow('star','分數','SCORE',(r?.score??0).toLocaleString(),'gold')+statRow('clock',goal?'通關時間':'遊玩時間',goal?'CLEAR TIME':'PLAY TIME',time(r?r.duration-r.remainingTime:0),'',record?'<span class="tag">NEW RECORD</span>':'')+statRow('badge','持有徽章','BADGES HELD',r?.heldBadgeCount??0,'',`<small> / ${this.scene?.level?.badges.length??'—'}</small>`)+statRow('combo','最高連擊','MAX COMBO',r?.playerStatistics.maxCombo??0)+`<div class="report-title">${titleTag([(r&&titles(r)[0])||'超新星'])}</div><div class="foot"><span>即將進入本場結果 · ${goal?5:3} 秒</span><small>AUTO →</small></div>`,'report')}<div class="actions">${button('goal-retry','再挑戰','RETRY',!this.adapter.replayEnabled,'','retry')}${button('next-stage','下一關','COMING SOON',true,'','next')}${this.adapter.current?.captureStarted?'':button('exit','返回選單','BACK TO MENU',false,'primary','home')}</div>`,`mission ${goal?'goal':'time-up'}`,who);break;
       }
       case 'P6':{
         const r=this.result!,st=r.playerStatistics,goal=r.endReason==='goal';
@@ -316,7 +327,7 @@ export class StationUI {
       case 'P7':{
         const on=this.adapter.replayEnabled,next=this.adapter.queue[1];
         body=this.boardOpen?this.shell('榮耀排行榜','TOP 20 · LOCAL RECORDS',this.leaderboard()+`<div class="actions">${button('close-ranking','返回','BACK',false,'','exit')}</div>`,'board-screen',who):
-          this.shell('再來一場','PLAY AGAIN',`<img class="again-left" src="${skinOf(this.adapter.current).poses.attack}" alt=""><img class="again-right" src="/assets/ui/enemy-dog.png" alt=""><section class="panel again"><h1>再來一場？<small>PLAY AGAIN?</small></h1><div class="actions">${button('replay','再玩一場','PLAY AGAIN',!on||!!this.countdownAt,on?'primary':'','retry')}${button('exit','結束','EXIT',false,on?'':'primary','exit')}</div><div class="secondary">${button('ranking','查看排行榜','TOP 20',false,'ghost')}</div></section><div class="next"><div class="lbl">下一位<small>NEXT PLAYER</small></div><span class="arr">»</span>${next?`<img src="${pose(next.characterId)}" alt="">`:''}<strong>${escape(next?.nickname??'目前無玩家等待')}</strong></div>${this.countdownAt?'<div class="modal countdown-layer" role="status"><b id="countdown">3</b></div>':''}`,'replay-screen',who);break;
+          this.shell('再來一場','PLAY AGAIN',`<img class="again-left" src="${skinOf(this.adapter.current).poses.attack}" alt=""><img class="again-right" src="/assets/ui/enemy-dog.png" alt=""><section class="panel again"><h1>再來一場？<small>PLAY AGAIN?</small></h1><div class="actions">${button('replay','再玩一場','PLAY AGAIN',!on||!!this.countdownAt,on?'primary':'','retry')}${this.adapter.current?.captureStarted?button('next-player','下一位玩家','NEXT PLAYER',false,on?'':'primary','next'):button('exit','結束','EXIT',false,on?'':'primary','exit')}</div><div class="secondary">${button('ranking','查看排行榜','TOP 20',false,'ghost')}</div></section><div class="next"><div class="lbl">下一位<small>NEXT PLAYER</small></div><span class="arr">»</span>${next?`<img src="${pose(next.characterId)}" alt="">`:''}<strong>${escape(next?.nickname??'目前無玩家等待')}</strong></div>${this.countdownAt?'<div class="modal countdown-layer" role="status"><b id="countdown">3</b></div>':''}`,'replay-screen',who);break;
       }
       default:body=`<div class="screen transparent" data-screen="${this.flow.flow}"></div>`;
     }
@@ -329,10 +340,10 @@ export class StationUI {
       const pad=this.pad,p=pad?profileFor(pad):null,name=(i:number)=>(pad?.mapping==='standard'&&PAD_NAMES[i])||`按鍵 ${i}`;
       body+=`<div class="modal screen" role="dialog" aria-modal="true" aria-label="按鍵設定"><section class="panel menu"><h2>按鍵設定<small>CONTROLS · 搖桿上下選動作 → 確認 → 按下要用的按鍵</small></h2>${p?REBINDABLE.map(a=>this.binding===a?button('bind-'+a,'請按下按鍵…','PRESS A BUTTON · 返回／OPTIONS 取消',false,'primary'):button('bind-'+a,CONTROL_LABELS[a],p.buttons[a]?.map(name).join(' / ')||'未設定')).join(''):'<p class="empty-state">未偵測到搖桿<br><small>請先按一下搖桿上的任一按鍵</small></p>'}${button('controls-reset','恢復預設','RESET TO DEFAULT',!p,'','retry')}${button('controls-back','返回','BACK',false,'','exit')}</section></div>`;
     }
-    else if(this.menu)body+=`<div class="modal screen" role="dialog" aria-modal="true" aria-label="系統選單"><section class="panel menu"><h2>系統選單<small>SYSTEM MENU</small></h2>${['P3','P4','P5','P6','P7'].includes(this.flow.flow)?button('continue','繼續','CONTINUE',false,'primary','next'):''}${this.flow.flow==='P4'?button('restart','重新開始','RESTART',false,'','retry'):''}${button('exit','回到主畫面','HOME',false,'','home')}${button('controls','按鍵設定','CONTROLS',false,'','list')}${this.flow.flow==='P0'?button('settings-replay',`再挑戰：${this.adapter.replayEnabled?'開啟':'關閉'}`,'REPLAY SETTING',false,'','list')+button('settings-time',`遊戲時間：${this.tier} 秒`,'TIME SETTING',false,'','clock')+button('records','排行榜管理','RECORDS',false,'','list'):''}</section></div>`;
+    else if(this.menu)body+=`<div class="modal screen" role="dialog" aria-modal="true" aria-label="系統選單"><section class="panel menu"><h2>系統選單<small>SYSTEM MENU</small></h2>${(this.adapter.current?.captureStarted||['P3','P4','P5','P6','P7'].includes(this.flow.flow)||this.flow.flow==='P0'&&this.returnFocus==='settings')?button('continue','繼續','CONTINUE',false,'primary','next'):''}${this.flow.flow==='P4'?button('restart','重新開始','RESTART',false,'','retry'):''}${this.adapter.current?.captureStarted?'':button('exit','回到主畫面','HOME',false,'','home')}${button('controls','按鍵設定','CONTROLS',false,'','list')}${this.flow.flow==='P0'?button('settings-replay',`再挑戰：${this.adapter.replayEnabled?'開啟':'關閉'}`,'REPLAY SETTING',false,'','list')+button('settings-time',`遊戲時間：${this.tier} 秒`,'TIME SETTING',false,'','clock')+button('records','排行榜管理','RECORDS',false,'','list'):''}</section></div>`;
     this.ui.innerHTML=body;this.syncCamera();
     // Gameplay screens keep DOM focus off buttons so Z/Enter reach the game, not a focused START.
-    if(this.menu||!['P3','P4'].includes(this.flow.flow))focus(this.ui.querySelector<HTMLElement>('.modal.screen')??this.ui,0,this.menu?'continue':this.flow.flow==='P1'?'ready':this.flow.flow==='P5'?'exit':this.flow.flow==='P6'?'result':this.flow.flow==='P7'?'exit':undefined);
+    if(this.menu||!['P3','P4'].includes(this.flow.flow))focus(this.ui.querySelector<HTMLElement>('.modal.screen')??this.ui,0,this.menu?'continue':this.flow.flow==='P1'?(onPhoto(this.adapter.current,this.step,this.comfy)&&!this.adapter.current?.photo&&!this.camError?'shoot':'ready'):this.flow.flow==='P5'?'exit':this.flow.flow==='P6'?'result':this.flow.flow==='P7'?(this.adapter.current?.captureStarted?'next-player':'exit'):undefined);
   }
   /** Open the camera while a live viewfinder is on screen, release it as soon as none is. */
   syncCamera(){

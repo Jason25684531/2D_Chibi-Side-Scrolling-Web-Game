@@ -3,7 +3,7 @@ export type Flow = typeof FLOW[number];
 export class GameplayStateMachine {
   flow: Flow = 'P0';
   transition(next: Flow) {
-    const legal = next === 'P0' || FLOW.indexOf(next) === FLOW.indexOf(this.flow) + 1 || (this.flow === 'P7' && next === 'P4') || (this.flow === 'P2' && next === 'P1');
+    const legal = next === 'P0' || FLOW.indexOf(next) === FLOW.indexOf(this.flow) + 1 || (this.flow === 'P7' && (next === 'P4' || next === 'P1')) || (this.flow === 'P2' && next === 'P1');
     if (!legal) throw new Error(`Illegal flow transition ${this.flow} -> ${next}`);
     this.flow = next;
   }

@@ -12,7 +12,7 @@ const fakeCamera=()=>{
   };
 };
 const liveTracks=(page:Page)=>page.evaluate(()=>(window as any).__tracks.filter((t:MediaStreamTrack)=>t.readyState==='live').length);
-const current=(page:Page)=>page.evaluate(()=>{const c=(window as any).__station.adapter.current;return c&&{state:c.generation.state,role:c.characterId,custom:!!c.custom,photo:!!c.photo};});
+const current=(page:Page)=>page.evaluate(()=>{const c=(window as any).__station.adapter.current;return c&&{state:c.generation.state,role:c.characterId,photo:!!c.photo};});
 
 type Comfy={online:boolean;hang?:boolean;status:Record<string,'pending'|'success'|'error'>;uploads:number;prompts:any[];deleted:string[];interrupted:string[]};
 /** Stands in for ComfyUI behind /comfy; results are served from assest/preset_<role> so the manifest and sheets are real. */
@@ -36,12 +36,11 @@ async function comfy(page:Page){
   });
   return s;
 }
-/** P0 → P1, pick the CUSTOM card, then the photo step with body `role` chosen for the ComfyUI template. */
+/** P0 → P1, pick body `role` (also the ComfyUI template), then the photo step. */
 async function toPhoto(page:Page,role='S2AM'){
   await page.goto('/');await page.keyboard.press('Enter');
-  await page.locator('[data-action=character-custom]:not([disabled])').click();await page.locator('[data-action=ready]').click();
-  await expect(page.locator('.booth')).toBeVisible();
   await page.locator(`[data-action=character-${role}]`).click();await expect(page.locator(`[data-action=character-${role}]`)).toHaveAttribute('aria-pressed','true');
+  await page.locator('[data-action=ready]').click();await expect(page.locator('.booth')).toBeVisible();
 }
 async function shoot(page:Page){
   await page.waitForFunction(()=>(document.querySelector('video.live') as HTMLVideoElement)?.videoWidth>0);
@@ -54,16 +53,25 @@ async function submitAndEnterP3(page:Page,role='S2AM'){
   await page.waitForFunction(()=>(window as any).__gameplay?.session?.tutorial&&(window as any).__station.flow.flow==='P3');
 }
 
-test('preset path never opens the camera or calls ComfyUI',async({page})=>{
+test('UC02-1 → UC03-1: no CUSTOM card; after the body the player may skip the photo and play that body without ComfyUI',async({page})=>{
   await page.addInitScript(fakeCamera);const s=await comfy(page);
   await page.goto('/');await page.keyboard.press('Enter');
-  await expect(page.locator('.character-card')).toHaveCount(5);await expect(page.locator('.steps li')).toHaveCount(3);
-  for(let i=0;i<3;i++)await page.keyboard.press('Enter');
+  await expect(page.locator('.character-card')).toHaveCount(4);await expect(page.locator('[data-action=character-custom]')).toHaveCount(0);
+  await expect(page.locator('.steps li')).toHaveCount(4);
+  await page.locator('[data-action=character-S3WW]').click();await page.locator('[data-action=ready]').click();
+  await expect(page.locator('.booth .prompt')).toContainText('要拍照生成專屬角色嗎？');
+  await expect(page.locator('.cards')).toHaveCount(0);
+  await expect(page.locator('[data-action=shoot]')).toBeFocused();
+  await expect(page.locator('#ready-label')).toHaveText('跳過拍照');
+  await page.locator('[data-action=ready]').click();await expect(page.locator('.item-card')).toHaveCount(5);
+  expect(await liveTracks(page)).toBe(0);
+  for(let i=0;i<2;i++)await page.locator('[data-action=ready]').click();
   await expect(page.locator('[data-screen=P3]')).toBeVisible();
   await expect(page.locator('[data-action=start-game]')).toBeEnabled({timeout:10000});
-  expect(await page.evaluate(()=>(window as any).__tracks.length)).toBe(0);
   expect(s.uploads+s.prompts.length).toBe(0);
-  expect(await current(page)).toEqual({state:'none',role:'S2AM',custom:false,photo:false});
+  expect(await current(page)).toEqual({state:'none',role:'S3WW',photo:false});
+  await page.keyboard.press('Enter');await expect(page.locator('[data-screen=P4]')).toBeVisible({timeout:5000});
+  expect(await page.evaluate(()=>{const p=(window as any).__gameplay.presentation.skin;return{custom:p.custom,role:p.role};})).toEqual({custom:false,role:'S3WW'});
 });
 
 test('capture is the unmirrored centre square, retake is free, confirm submits once with the chosen template',async({page})=>{
@@ -71,7 +79,7 @@ test('capture is the unmirrored centre square, retake is free, confirm submits o
   await toPhoto(page,'S1WM');await expect(page.locator('.steps li')).toHaveCount(4);
   await expect(page.locator('.privacy')).toContainText('照片將上傳至 AI 服務生成角色，並暫存於本站台電腦');
   await page.waitForFunction(()=>(document.querySelector('video.live') as HTMLVideoElement)?.videoWidth>0);
-  await expect(page.locator('[data-action=ready]')).toBeDisabled();
+  await expect(page.locator('#ready-label')).toHaveText('跳過拍照');
   expect(await page.locator('video.live').evaluate(v=>getComputedStyle(v).transform)).toMatch(/^matrix\(-1/);
   await page.locator('[data-action=shoot]').click();await expect(page.locator('.viewfinder img')).toBeVisible();
   expect(await liveTracks(page)).toBe(0);
@@ -81,8 +89,8 @@ test('capture is the unmirrored centre square, retake is free, confirm submits o
     const px=(x:number)=>Array.from(g.getImageData(x,512,1,1).data.slice(0,3));return{w:img.width,h:img.height,left:px(10),right:px(1013)};
   });
   expect(photo).toEqual({w:1024,h:1024,left:[255,0,0],right:[0,0,255]});
-  await expect(page.locator('#ready-label')).toHaveText('生成角色');
-  await page.locator('[data-action=retake]').click();await expect(page.locator('[data-action=ready]')).toBeDisabled();
+  await expect(page.locator('#ready-label')).toHaveText('生成角色');await expect(page.locator('.booth .prompt')).toContainText('這張可以嗎？');
+  await page.locator('[data-action=retake]').click();await expect(page.locator('#ready-label')).toHaveText('跳過拍照');
   await shoot(page);await page.locator('[data-action=retake]').click();await shoot(page);
   expect(s.uploads+s.prompts.length).toBe(0);
   await page.locator('[data-action=ready]').click();await expect(page.locator('.item-card')).toHaveCount(5);
@@ -152,33 +160,55 @@ test('retake after submitting cancels the job and ignores its late result',async
   expect(s.prompts[1]['2'].inputs.String).not.toBe(s.prompts[0]['2'].inputs.String);
 });
 
-test('a result that arrives after the player left never reaches the next player',async({page})=>{
-  await page.addInitScript(fakeCamera);const s=await comfy(page);
+test('capture locks home even after retaking and switching to a preset',async({page})=>{
+  await page.addInitScript(fakeCamera);await comfy(page);
   await toPhoto(page);await shoot(page);
-  await page.locator('[data-action=ready]').click();await expect.poll(()=>s.prompts.length).toBe(1);
-  for(let i=0;i<3;i++)await page.locator('[data-action=prev]').click();
-  await expect(page.locator('[data-screen=P0]')).toBeVisible();expect(s.deleted).toEqual(['prompt-1']);
-  expect(await liveTracks(page)).toBe(0);
-  await page.keyboard.press('Enter');s.status['prompt-1']='success';await page.waitForTimeout(2500);
-  expect(await current(page)).toEqual({state:'none',role:'S2AM',custom:false,photo:false});
+  await page.locator('[data-action=retake]').click();
+  await page.keyboard.press('KeyH');
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await expect(page.locator('[data-action=exit]')).toHaveCount(0);
+  await page.locator('[data-action=continue]').click();
+  await page.locator('[data-action=prev]').click();
+  await page.locator('[data-action=character-S3WW]').click();
+  await expect(page.locator('[data-action=prev]')).toBeDisabled();
+  await page.keyboard.press('Backspace');
+  await expect(page.locator('[data-screen=P1]')).toBeVisible();
+  await expect(page.locator('.name-plate')).toHaveCount(0);
 });
 
-test('ComfyUI offline disables the photo option and the preset path still works',async({page})=>{
+test('skip uses the assigned nickname and the generated character stays in training on Back',async({page})=>{
+  await page.addInitScript(fakeCamera);const s=await comfy(page);
+  await toPhoto(page);await shoot(page);
+  await page.locator('[data-action=ready]').click();
+  await page.locator('[data-action=ready]').click();
+  const nickname=page.locator('#nickname'),assigned=await nickname.inputValue();
+  await nickname.fill('draft');
+  await page.getByRole('button',{name:'跳過 SKIP'}).focus();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('[data-screen=P3] .who')).toContainText(assigned);
+  await expect.poll(()=>s.prompts.length).toBe(1);
+  s.status['prompt-1']='success';
+  await expect(page.locator('#gen-status')).toContainText('專屬角色完成',{timeout:15000});
+  await expect(page.locator('[data-action=exit]')).toHaveCount(0);
+  await page.keyboard.press('Backspace');
+  await expect(page.locator('[data-screen=P3]')).toBeVisible();
+});
+
+test('ComfyUI offline drops the photo step and the chosen body still plays',async({page})=>{
   await page.addInitScript(fakeCamera);const s=await comfy(page);s.online=false;
   await page.goto('/');await page.keyboard.press('Enter');
-  await expect(page.locator('[data-action=character-custom]')).toBeDisabled({timeout:5000});
-  await expect(page.locator('.readiness')).toContainText('AI 角色生成暫時無法使用');
+  await expect(page.locator('.steps li')).toHaveCount(3);
   for(let i=0;i<3;i++)await page.locator('[data-action=ready]').click();
   await expect(page.locator('[data-screen=P3]')).toBeVisible();
+  expect(await page.evaluate(()=>(window as any).__tracks.length)).toBe(0);
 });
 
 test('denied camera shows the reason and the preset choice still advances',async({page})=>{
   await page.addInitScript(()=>{navigator.mediaDevices.getUserMedia=()=>Promise.reject(new DOMException('denied','NotAllowedError'));});await comfy(page);
   await toPhoto(page);
   await expect(page.locator('.viewfinder [role=alert]')).toContainText('未取得攝影機權限');
-  await expect(page.locator('[data-action=shoot]')).toBeDisabled();await expect(page.locator('[data-action=ready]')).toBeDisabled();
-  await page.locator('[data-action=prev]').click();await page.locator('[data-action=character-S3WW]').click();
-  await expect(page.locator('.steps li')).toHaveCount(3);await page.locator('[data-action=ready]').click();await expect(page.locator('.item-card')).toHaveCount(5);
+  await expect(page.locator('[data-action=shoot]')).toBeDisabled();await expect(page.locator('[data-action=ready]')).toBeFocused();
+  await page.keyboard.press('Enter');await expect(page.locator('.item-card')).toHaveCount(5);
 });
 
 test('character art is never shown above its natural resolution, and the game renders at native 1920x1080',async({page})=>{
@@ -188,7 +218,7 @@ test('character art is never shown above its natural resolution, and the game re
     .map(i=>({src:i.src.slice(-40),ratio:i.getBoundingClientRect().height/i.naturalHeight})).filter(r=>r.ratio>1.01));
   await page.waitForFunction(()=>[...document.querySelectorAll<HTMLImageElement>('.readiness img')].every(i=>i.complete));
   expect(await upscaled()).toEqual([]);
-  for(let i=0;i<3;i++)await page.keyboard.press('Enter');
+  for(let i=0;i<4;i++)await page.locator('[data-action=ready]').click();
   await page.waitForFunction(()=>(window as any).__gameplay?.session?.tutorial);
   expect(await upscaled()).toEqual([]);
   expect(await page.evaluate(()=>{const g=(window as any).__gameplay,v=g.cameras.main.worldView;return{canvas:[g.game.canvas.width,g.game.canvas.height],view:[Math.round(v.width),Math.round(v.height)]};})).toEqual({canvas:[1920,1080],view:[620,240]});
@@ -205,7 +235,7 @@ test('character art is never shown above its natural resolution, and the game re
   expect(await drawn()).toEqual({dx:0,dy:0,dr:0,db:0});
 });
 
-test('leaving a run with a custom character by pad confirm does not break the station',async({page})=>{
+test('captured player stays in the run and hands off to a fresh character selection after results',async({page})=>{
   const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
   await page.addInitScript(fakeCamera);const s=await comfy(page);
   await submitAndEnterP3(page);s.status['prompt-1']='success';
@@ -213,11 +243,28 @@ test('leaving a run with a custom character by pad confirm does not break the st
   await page.keyboard.press('Enter');await expect(page.locator('[data-screen=P4]')).toBeVisible({timeout:5000});
   await page.waitForFunction(()=>!(window as any).__gameplay.session.tutorial);
   const pad=async(index:number)=>{await page.evaluate(i=>{(window as any).__gameplay.testPad={mapping:'standard',axes:[0],buttons:Array.from({length:16},(_,j)=>({pressed:j===i}))};},index);await page.waitForTimeout(90);await page.evaluate(()=>{const g=(window as any).__gameplay;if(g)g.testPad=null;(window as any).__station.testPad=null;});await page.waitForTimeout(90);};
-  await pad(9);await expect(page.locator('.modal.screen [data-action=exit]')).toBeVisible();
-  await page.locator('.modal.screen [data-action=exit]').focus();await pad(0);
-  await expect(page.locator('[data-screen=P0]')).toBeVisible();await page.waitForTimeout(500);
-  await page.keyboard.press('Enter');await expect(page.locator('[data-screen=P1]')).toBeVisible();
-  for(let i=0;i<3;i++)await page.keyboard.press('Enter');
-  await page.waitForFunction(()=>(window as any).__gameplay?.session?.tutorial);await page.waitForTimeout(500);
+  await pad(9);await expect(page.locator('.modal.screen')).toBeVisible();
+  await expect(page.locator('.modal.screen [data-action=exit]')).toHaveCount(0);
+  await pad(9);await pad(1);
+  await expect(page.locator('[data-screen=P4]')).toBeVisible();
+  await expect(page.locator('[data-action=exit]')).toHaveCount(0);
+  await page.evaluate(()=>{const u=(window as any).__station;u.result=u.scene.session.finish('goal');u.go('P5');});
+  await expect(page.locator('[data-action=exit]')).toHaveCount(0);
+  await expect(page.locator('[data-screen=P6]')).toBeVisible({timeout:8000});
+  await page.locator('[data-action=result]').click();
+  await page.locator('[data-action=next-player]').click();
+  await expect(page.locator('[data-screen=P1]')).toBeVisible();
+  await expect(page.locator('[data-action=prev]')).toBeEnabled();
   expect(errors).toEqual([]);
+});
+test('reference entry opens settings, ranking and preparation',async({page})=>{
+  await page.goto('/');
+  await expect(page.locator('.mainvis')).toHaveJSProperty('naturalWidth',1920);
+  await page.locator('[data-action=settings]').click();
+  await expect(page.getByRole('dialog',{name:'系統選單'})).toBeVisible();
+  await page.locator('[data-action=continue]').click();
+  await page.locator('[data-action=ranking]').click();
+  await page.locator('[data-action=close-ranking]').click();
+  await page.locator('[data-action=demo]').click();
+  await expect(page.locator('[data-screen=P1]')).toBeVisible();
 });

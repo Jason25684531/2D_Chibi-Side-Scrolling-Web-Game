@@ -2,8 +2,8 @@ import type {GameplayResult} from '../core/session';
 import {ATTACK_ITEMS,TEST_PROFILE as P} from '../core/config';
 import {ROLES,type RoleCode} from '../comfy/skin';
 import type {Generation} from '../comfy/client';
-/** custom: the player chose the photo route; photo: object URL of the capture (memory only); generation: the ComfyUI job for this player. */
-export type Identity={sessionId:string;nickname:string;characterId:RoleCode;attackItem:string;custom?:boolean;photo?:string;generation:Generation};
+/** captureStarted: a photo was taken this session (locks home); photo: object URL of the capture (memory only); generation: the ComfyUI job for this player. */
+export type Identity={sessionId:string;nickname:string;defaultNickname:string;characterId:RoleCode;attackItem:string;captureStarted?:boolean;photo?:string;generation:Generation};
 export type Ranking={runId:string;nickname:string;score:number;tier:string;titles:string[];characterId?:string;completedAt?:string};
 const RECORDS_KEY='rog-future-gamer.records.v1';
 const SEQ_KEY='fg3-plyr-seq',TIME_KEY='rog-future-gamer.time',REPLAY_KEY='rog-future-gamer.replay';
@@ -60,7 +60,7 @@ export class MockStation {
   }
   retryStorage(){this.load();if(this.storageStatus==='ready')this.persist();}
   get current(){return this.queue[0];}
-  enqueue(nickname=typeof window==='undefined'?'PLYR0001':nextNickname()){this.queue.push({sessionId:crypto.randomUUID(),nickname,characterId:ROLES[0],attackItem:ATTACK_ITEMS[0].src,generation:{state:'none'}});}
+  enqueue(nickname=typeof window==='undefined'?'PLYR0001':nextNickname()){this.queue.push({sessionId:crypto.randomUUID(),nickname,defaultNickname:nickname,characterId:ROLES[0],attackItem:ATTACK_ITEMS[0].src,generation:{state:'none'}});}
   exit(){this.queue.shift();}
   save(result:GameplayResult){
     if(!this.current||this.records.some(r=>r.runId===result.runId))return;

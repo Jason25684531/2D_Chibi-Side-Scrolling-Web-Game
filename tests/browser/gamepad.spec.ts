@@ -1,4 +1,5 @@
 import {test,expect,type Page} from '@playwright/test';
+import {comfyOffline} from './comfy-offline';
 test.use({viewport:{width:1920,height:1080}});
 /**
  * Mock pad in the W3C standard layout (0 Cross, 1 Circle, 2 Square, 3 Triangle, 5 R1, 9 OPTIONS, 12-15 D-pad),
@@ -20,6 +21,7 @@ const startRun=async(page:Page)=>{
 };
 const focused=(page:Page)=>page.evaluate(()=>(document.activeElement as HTMLElement)?.dataset.action);
 
+test.beforeEach(comfyOffline);
 test('P3 Input: stick moves, Cross jumps and double jumps, R1 dashes, only Triangle starts the game',async({page})=>{
   await boot(page);await page.evaluate(()=>{const u=(window as any).__station;u.adapter.enqueue();u.go('P1');u.go('P2');u.go('P3');u.start(true);});
   await page.waitForFunction(()=>(window as any).__gameplay?.session?.tutorial);await grounded(page);await connect(page);
@@ -112,7 +114,6 @@ test('P1: stick up / down jumps between the card row and the BACK / NEXT row ins
   await tap(page,13);expect(await focused(page)).toMatch(/^(prev|ready)$/); // one move down: straight to the step buttons
   await tap(page,13);expect(await focused(page)).toMatch(/^(prev|ready)$/); // nothing below: stays
   await page.locator('[data-action=character-S2AM]').focus();await tap(page,13);await expect(page.locator('[data-action=prev]')).toBeFocused(); // the closest one underneath
-  await page.locator('[data-action=character-custom]').focus();await tap(page,13);expect(await focused(page)).toMatch(/^(prev|ready)$/);
   // Buttons still work while the page has lost focus (camera prompt, address bar): a stick cannot click to refocus.
   await page.evaluate(()=>{Object.defineProperty(document,'hasFocus',{value:()=>false});});
   await page.locator('[data-action=ready]').focus();await tap(page,0);await expect(page.locator('.item-card')).toHaveCount(5);

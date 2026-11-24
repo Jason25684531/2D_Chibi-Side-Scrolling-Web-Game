@@ -1,6 +1,8 @@
 import {test,expect} from '@playwright/test';
+import {comfyOffline} from './comfy-offline';
 test.use({viewport:{width:1920,height:1080}});
 
+test.beforeEach(comfyOffline);
 test('tutorial lessons come from the practice slice, follow runtime actions and reset before the real run',async({page})=>{
   await page.goto('/');await page.locator('[data-action=demo]').click();for(let i=0;i<3;i++)await page.locator('[data-action=ready]').click();
   await page.waitForFunction(()=>(window as any).__gameplay?.session?.tutorial);
@@ -139,7 +141,9 @@ test('one failed art file does not lock the station: P3 and P4 still start',asyn
   const warnings:string[]=[];page.on('console',m=>{if(m.type()==='warning')warnings.push(m.text());});
   await page.route('**/assets/cyber-run/art/art-976d152b6e4b.png',r=>r.abort());
   await page.goto('/');await page.waitForFunction(()=>!!(window as any).__station?.game.registry.get('assetsReady'),null,{timeout:15000});
-  await page.evaluate(()=>{const u=(window as any).__station;u.adapter.enqueue();u.go('P1');for(let i=0;i<3;i++)u.act('ready');});
+  await page.evaluate(()=>{const u=(window as any).__station;u.adapter.enqueue();u.go('P1');});
+  await page.waitForFunction(()=>(window as any).__station.comfy===false);
+  await page.evaluate(()=>{const u=(window as any).__station;for(let i=0;i<3;i++)u.act('ready');});
   await page.waitForFunction(()=>(window as any).__gameplay?.session?.tutorial===true);
   await page.evaluate(()=>(window as any).__station.act('start-game'));
   await expect(page.locator('[data-screen=P4]')).toBeVisible({timeout:6000});

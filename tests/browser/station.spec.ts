@@ -1,6 +1,8 @@
 import {test,expect} from '@playwright/test';
 import {driveRoute} from './route';
+import {comfyOffline} from './comfy-offline';
 test.use({viewport:{width:1920,height:1080}});
+test.beforeEach(comfyOffline);
 test('Home traps focus before a run and above Replay countdown; Back restores flow',async({page})=>{
   await page.goto('/');await page.waitForFunction(()=>!!(window as any).__station?.game.registry.get('assetsReady'));
   await page.keyboard.press('KeyH');await expect(page.locator('.modal.screen [data-action=exit]')).toBeFocused();
@@ -16,9 +18,9 @@ test('Home traps focus before a run and above Replay countdown; Back restores fl
 test('M5 three-step readiness (character → attack item → nickname), Back, no P2 screen and isolated tutorial',async({page})=>{
   const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto('/');await expect(page.locator('[data-screen=P0]')).toBeVisible();
-  await page.keyboard.press('Enter');await expect(page.locator('[data-screen=P1] .character-card')).toHaveCount(5);await expect(page.locator('.character-card.locked')).toHaveCount(0);await expect(page.locator('[data-action=ready]')).toBeFocused();
+  await page.keyboard.press('Enter');await expect(page.locator('[data-screen=P1] .character-card')).toHaveCount(4);await expect(page.locator('.steps li')).toHaveCount(3);await expect(page.locator('.character-card.locked')).toHaveCount(0);await expect(page.locator('[data-action=ready]')).toBeFocused();
   await page.keyboard.press('Enter');await expect(page.locator('.item-card')).toHaveCount(5);
-  await page.keyboard.press('Backspace');await expect(page.locator('.character-card')).toHaveCount(5);
+  await page.keyboard.press('Backspace');await expect(page.locator('.character-card')).toHaveCount(4);
   await page.keyboard.press('KeyZ');await expect(page.locator('.item-card')).toHaveCount(5);
   await page.keyboard.press('Enter');await expect(page.locator('#nickname')).toHaveValue(/^PLYR\d{4}$/);await expect(page.locator('#nickname')).toHaveAttribute('maxlength','8');
   await page.keyboard.press('Enter');await expect(page.locator('[data-screen=P3]')).toBeVisible();
@@ -92,7 +94,7 @@ test('split CTA: BACK steps back, then leaves the queue from step 1; PLAY re-ent
   await page.keyboard.press('Enter');await expect(page.locator('[data-action=ready]')).toBeFocused();
   await page.keyboard.press('Enter');await expect(page.locator('.item-card')).toHaveCount(5);await expect(page.locator('[data-action=ready]')).toBeFocused();
   await page.keyboard.press('ArrowLeft');await expect(page.locator('[data-action=prev]')).toBeFocused();await page.keyboard.press('Enter');
-  await expect(page.locator('.character-card')).toHaveCount(5);await expect(page.locator('[data-action=ready]')).toBeFocused();
+  await expect(page.locator('.character-card')).toHaveCount(4);await expect(page.locator('[data-action=ready]')).toBeFocused();
   await page.locator('[data-action=prev]').click();
   await expect(page.locator('[data-screen=P0]')).toBeVisible();expect(await page.evaluate(()=>(window as any).__station.adapter.queue.length)).toBe(0);
   await page.keyboard.press('Enter');await expect(page.locator('[data-screen=P1]')).toBeVisible();await page.keyboard.press('Backspace');await expect(page.locator('[data-screen=P0]')).toBeVisible();
@@ -106,12 +108,34 @@ test('window blur during a station run opens the system menu instead of a silent
   expect(await page.evaluate(()=>(window as any).__gameplay.run.phase)).toBe('paused');
 });
 
-test('home keeps only the main visual, START and LEADERBOARD; the board opens and Back returns focus',async({page})=>{
+test('home character floats vertically and honors reduced motion',async({page})=>{
+  await page.emulateMedia({reducedMotion:'no-preference'});
+  await page.goto('/');
+  const hero=page.locator('.home-hero');
+  await expect(hero).toHaveJSProperty('naturalWidth',495);
+  const motion=await hero.evaluate(async node=>{
+    const [animation]=node.getAnimations();
+    animation.pause();
+    await animation.ready;
+    const position=(time:number)=>{
+      animation.currentTime=time;
+      return node.getBoundingClientRect().top;
+    };
+    const start=position(0),upper=position(500),lower=position(1500);
+    return {travel:lower-upper,loop:position(2000)-start};
+  });
+  expect(motion.travel).toBeCloseTo(26.8,1);
+  expect(motion.loop).toBeCloseTo(0,1);
+  await page.emulateMedia({reducedMotion:'reduce'});
+  await expect(hero).toHaveCSS('transform','none');
+});
+
+test('home offers start, leaderboard and settings; the board opens and Back returns focus',async({page})=>{
   await page.addInitScript(key=>localStorage.setItem(key,JSON.stringify({schemaVersion:1,records:Array.from({length:12},(_,i)=>({runId:`w-${i}`,nickname:'Player '+i,score:1000-i,tier:'120',titles:[],characterId:'a'}))})),'rog-future-gamer.records.v1');
   await page.goto('/');await expect(page.locator('[data-screen=P0] .mainvis')).toBeVisible();
-  await expect(page.locator('[data-screen=P0] button')).toHaveCount(2);await expect(page.locator('[data-action=demo]')).toBeFocused();
+  await expect(page.locator('[data-screen=P0] button')).toHaveCount(3);await expect(page.locator('[data-action=demo]')).toBeFocused();
   for(const gone of ['.wall','.top20','.notice','.p0-title','.brand','.hints'])await expect(page.locator('[data-screen=P0] '+gone)).toHaveCount(0);
-  await page.keyboard.press('ArrowRight');await expect(page.locator('[data-action=ranking]')).toBeFocused();await page.keyboard.press('Enter');
+  await page.keyboard.press('ArrowDown');await expect(page.locator('[data-action=ranking]')).toBeFocused();await page.keyboard.press('Enter');
   await expect(page.getByRole('heading',{name:'TOP 20 / 120 秒'})).toBeVisible();await expect(page.locator('.full-ranking .rank-row')).toHaveCount(10);
   await page.keyboard.press('Backspace');await expect(page.locator('[data-screen=P0] .mainvis')).toBeVisible();await expect(page.locator('[data-action=ranking]')).toBeFocused();
 });
@@ -153,7 +177,7 @@ test('records panel: delete one row and reset all, each only on the second press
 });
 
 test('nickname keypad: the stick reaches it, the first key replaces the default name, delete and the 8-character cap work',async({page})=>{
-  await page.goto('/');for(let i=0;i<3;i++)await page.keyboard.press('Enter');
+  await page.goto('/');await page.waitForFunction(()=>(window as any).__station?.comfy===false);for(let i=0;i<3;i++)await page.keyboard.press('Enter');
   await expect(page.locator('#nickname')).toHaveValue(/^PLYR\d{4}$/);
   const key=(k:string)=>page.locator(`[data-action=key-${k}]`);
   await expect(page.locator('.keypad .key')).toHaveCount(37);
