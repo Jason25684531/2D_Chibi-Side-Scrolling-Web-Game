@@ -10,8 +10,11 @@ const ICONS:Record<string,string>={
   skull:'<path d="M4 11a8 8 0 0116 0v4a2 2 0 01-2 2v3H6v-3a2 2 0 01-2-2z"/><circle cx="9" cy="11" r="1.6"/><circle cx="15" cy="11" r="1.6"/>',
   combo:'<path d="M13 2L5 14h6l-1 8 9-13h-6z"/>',bounce:'<path d="M4 20c4-10 8-14 16-16M14 4h6v6"/>',bolt:'<path d="M3 12h9M12 12l4-4M12 12l4 4M17 6h4v12h-4z"/>',
   star:'<path d="M12 3l2.8 6 6.2.8-4.5 4.3 1.2 6.3L12 17.3 6.3 20.4l1.2-6.3L3 9.8 9.2 9z"/>',pencil:'<path d="M4 20h4l10-10-4-4L4 16v4z"/><path d="M12 8l4 4"/>',
-  camera:'<path d="M3 8h4l2-3h6l2 3h4v11H3z"/><circle cx="12" cy="13" r="4"/>',lock:'<rect x="5" y="11" width="14" height="10"/><path d="M8 11V7a4 4 0 018 0v4"/>'
-};
+  camera:'<path d="M3 8h4l2-3h6l2 3h4v11H3z"/><circle cx="12" cy="13" r="4"/>',
+  // Pad face buttons by W3C standard index (0 cross, 1 circle, 2 square, 3 triangle) and the left stick.
+  'pad-0':'<circle cx="12" cy="12" r="10"/><path d="M8.5 8.5l7 7M15.5 8.5l-7 7"/>','pad-1':'<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4.5"/>',
+  'pad-2':'<circle cx="12" cy="12" r="10"/><rect x="8" y="8" width="8" height="8"/>','pad-3':'<circle cx="12" cy="12" r="10"/><path d="M12 7.5l4.5 8h-9z"/>',
+  stick:'<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4.5"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3"/>'};
 export const icon=(key:string)=>ICONS[key]?`<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">${ICONS[key]}</svg>`:'';
 export const avatar=(id='a',frame:Parameters<typeof pose>[1]='idle',src=pose(id,frame))=>`<div class="avatar"><img src="${src}" alt="${escape(characterName(id))}"></div>`;
 /** Icon + bilingual label + right-aligned value; `extra` is trusted markup after the value. */

@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import {GameplayStateMachine,type Flow} from '../core/state';
-import {InputAdapter,type Actions,type Pad} from '../input/adapter';
-import {activePad,profileFor,saveProfile,rebind,REBINDABLE} from '../input/gamepad';
+import {InputAdapter,type Action,type Actions,type Pad} from '../input/adapter';
+import {activePad,profileFor,saveProfile,rebind,REBINDABLE,STANDARD} from '../input/gamepad';
 import type {GameplayScene} from '../scenes/gameplay';
 import type {GameplayResult} from '../core/session';
 import {TEST_PROFILE as P,ATTACK_ITEMS} from '../core/config';
@@ -10,7 +10,7 @@ import {addSheets,removeSheets} from '../assets/characters';
 import {probe,generate,drop} from '../comfy/client';
 import type {RoleCode} from '../comfy/skin';
 import {MockStation,titles,savedTier,saveTier,type Identity} from './mock-station';
-import {avatar,button,panel,escape,focus,focusY,text,time,chip,statRow,titleTag,rankRow} from './components';
+import {avatar,button,panel,escape,focus,focusY,text,time,chip,statRow,titleTag,rankRow,icon} from './components';
 import {readiness,readinessSteps,readyLabel,onPhoto,willSubmit,skinOf,genText} from './readiness';
 import {openCamera,closeCamera,cameraError,capturePhoto} from './camera';
 import './station.css';
@@ -19,6 +19,8 @@ import {sfx} from '../audio/sfx';
 /** Buttons that go back a step play UI-03 (sheet: 返回上一頁／取消／重拍); every other button plays UI-02. */
 const BACK=new Set(['prev','exit','close-ranking','records-back','retake']);
 const ATTRACT_IDLE=60000;
+/** A player who walks away from P1/P6/P7 (even photo-locked) is sent home after SESSION_IDLE + SESSION_WARN. Calibration knobs. */
+const SESSION_IDLE=90000,SESSION_WARN=10000,ABANDONABLE=['P1','P6','P7'];
 // Temporary main visual (PO 2026-11-19) until the final key art lands.
 const MAINVIS=new URL('./cyber-runner.webp',import.meta.url).href;
 const HOME_HERO=new URL('./cyber-runner-hero.webp',import.meta.url).href;
@@ -28,7 +30,6 @@ const PAD_NAMES=['✕','○','□','△','L1','R1','L2','R2','SHARE','OPTIONS','
 // Never captured while binding: directions, OPTIONS, and the current back button (it cancels instead of silently swapping).
 const FIXED=['home','pause','left','right','up','down','back'] as const;
 const NAV='<span><kbd>← →</kbd>選擇</span><span><kbd>Z / ENTER</kbd>確認</span><span><kbd>BACKSPACE</kbd>返回</span><span><kbd>H</kbd>選單</span>';
-const HINTS:Record<string,string>={P3:'<span><kbd>← →</kbd>移動</span><span><kbd>Z</kbd>跳躍</span><span><kbd>X</kbd>衝刺</span><span><kbd>C</kbd>投擲</span><span><kbd>ENTER</kbd>開始遊戲</span><span><kbd>H</kbd>選單</span>'};
 // Text wordmark only; the slashes are decoration, not the ROG eye (DESIGN.md §8.5).
 const BRAND='<div class="brand"><svg class="logo" viewBox="0 0 70 56" aria-hidden="true"><polygon points="4,8 30,8 22,48 0,48"/><polygon points="36,8 70,8 50,48 28,48" opacity=".55"/></svg><div class="wordmark">ROG<span>FUTURE GAMER</span></div>';
 /** Rarest first; no title shows 「超新星」 (planning v0.3 §3.3). The badge CSS drops whatever does not fit. */
@@ -38,7 +39,7 @@ export class StationUI {
   flow=new GameplayStateMachine();adapter=new MockStation();inputAdapter=new InputAdapter();
   tier=typeof window==='undefined'?P.timeTier:savedTier();entered=performance.now();countdownAt=0;menu=false;testPad:Pad|null=null;
   root:HTMLElement;ui:HTMLElement;progress=new Set<string>();private previous=performance.now();
-  result:GameplayResult|null=null;step=0;idleSince=performance.now();attract=false;
+  result:GameplayResult|null=null;step=0;idleSince=performance.now();attract=false;idleWarn=false;
   boardOpen=false;rankPage=0;private returnFocus:string|undefined;
   /** P0 menu → records panel; armed = the delete/reset action waiting for its confirming second press. */
   admin=false;armed='';
@@ -55,9 +56,9 @@ export class StationUI {
     this.ui=document.createElement('div');this.ui.id='station-ui';
     document.body.append(this.root);this.root.append(document.querySelector('#game')!,this.ui);
     game.registry.set('station',this);this.inputAdapter.attach();
-    this.ui.addEventListener('click',event=>{const b=(event.target as HTMLElement).closest<HTMLButtonElement>('button');if(b&&!b.disabled){sfx(BACK.has(b.dataset.action!)?'UI-03':'UI-02');this.act(b.dataset.action!);}});
+    this.ui.addEventListener('click',event=>{const b=(event.target as HTMLElement).closest<HTMLButtonElement>('button');if(b&&!b.disabled&&!this.wake()){sfx(BACK.has(b.dataset.action!)?'UI-03':'UI-02');this.act(b.dataset.action!);}});
     this.ui.addEventListener('pointerdown',()=>this.wake());
-    this.ui.addEventListener('input',event=>{const input=event.target as HTMLInputElement;if(input.id==='nickname'&&this.adapter.current)this.adapter.current.nickname=input.value;});
+    this.ui.addEventListener('input',event=>{this.wake();const input=event.target as HTMLInputElement;if(input.id==='nickname'&&this.adapter.current)this.adapter.current.nickname=input.value;});
     this.ui.addEventListener('focusin',event=>{
       const action=(event.target as HTMLElement).dataset?.action;if(action)this.lastFocus=action;
       if(event.target instanceof HTMLInputElement)for(const a of [this.inputAdapter,this.scene.inputAdapter]){a?.codes.clear();a?.previous.clear();a?.clear();}
@@ -88,18 +89,18 @@ export class StationUI {
     if(this.game.scene.isActive('Gameplay'))this.scene.scene.restart(data);else this.game.scene.start('Gameplay',data);
   }
   stop(){if(this.game.scene.isActive('Gameplay'))this.game.scene.stop('Gameplay');this.inputAdapter.attach();}
-  exit(finish=false){
+  /** A photo locks home from the capture until the run ends; from P5 on, every player may go home. */
+  get locked(){return !!this.adapter.current?.captureStarted&&!['P5','P6','P7'].includes(this.flow.flow);}
+  exit(){
+    if(this.locked)return;
     const player=this.adapter.current;
-    if(player?.captureStarted&&!(finish&&this.flow.flow==='P7'))return;
     this.menu=false;this.stop();if(player)this.dropPhoto(player);this.adapter.exit();
-    if(player?.captureStarted){
-      if(!this.adapter.current)this.adapter.enqueue();
-      this.go('P1');return;
-    }
     this.go('P0');if(this.adapter.current)this.go('P1');
   }
-  /** Any input on P0 resets the idle clock and closes the attract video. Returns true when it closed the video. */
-  wake(){this.idleSince=performance.now();if(!this.attract)return false;this.attract=false;this.render();return true;}
+  /** Idle recovery: same cleanup as exit(), but past the photo lock and always home. */
+  abandon(){const player=this.adapter.current;this.idleWarn=false;this.camError='';this.stop();if(player)this.dropPhoto(player);this.adapter.exit();this.go('P0');}
+  /** Any input resets the idle clock and closes the attract video or the idle warning. Returns true when it closed one. */
+  wake(){this.idleSince=performance.now();if(!this.attract&&!this.idleWarn)return false;this.attract=this.idleWarn=false;this.render();return true;}
   act(action:string){
     if(this.countdownAt&&this.flow.flow==='P7'&&!this.menu)return;
     if(action==='demo'&&this.flow.flow==='P0'){this.adapter.enqueue();this.go('P1');}
@@ -132,7 +133,7 @@ export class StationUI {
       // Generation runs in the background through the remaining steps and the P3 sandbox.
       if(willSubmit(c,this.step,this.comfy))void generate(c,c.photo!,c.characterId,skin=>addSheets(this.game.textures,skin),skin=>removeSheets(this.game.textures,skin));
       if(this.step<readinessSteps(c,this.comfy).length-1){this.setStep(this.step+1);return;}
-      // UC04-1: 8 characters; P2 has no screen any more (single 100 s run).
+      // UC04-1: 8 characters; P2 has no screen.
       c.nickname=(action==='skip-nickname'?c.defaultNickname:c.nickname.trim()||c.defaultNickname).slice(0,8);
       this.go('P2');this.go('P3');if(this.game.registry.get('assetsReady'))this.start(true);
     }
@@ -143,7 +144,6 @@ export class StationUI {
     if(action==='continue'){this.menu=false;this.scene.run?.resume();this.scene.fixed?.reset();this.render();focus(this.ui,0,this.returnFocus);}
     if(action==='restart'&&this.flow.flow==='P4'){this.menu=false;this.start();this.render();}
     if(action==='exit')this.exit();
-    if(action==='next-player'&&this.flow.flow==='P7')this.exit(true);
     if(action==='result'&&this.flow.flow==='P6')this.go('P7');
     if(action==='goal-retry'&&this.flow.flow==='P5'&&this.adapter.replayEnabled){this.go('P6');this.go('P7');this.act('replay');return;}
     if(action==='ranking'&&['P0','P6','P7'].includes(this.flow.flow)){if(this.flow.flow==='P6')this.go('P7');this.boardOpen=true;this.rankPage=0;this.render();return;}
@@ -191,7 +191,7 @@ export class StationUI {
     if(document.activeElement instanceof HTMLInputElement)return true;
     // Waiting for a button: nothing else may act on it. OPTIONS (home) cancels; update() captures the press.
     if(this.binding){if(a.home||a.pause||a.back){sfx('UI-03');this.binding='';this.render();focus(this.ui.querySelector<HTMLElement>('.modal.screen')!,0,'bind-jump');}return true;}
-    if(this.flow.flow==='P0'&&(a.move||a.jump||a.confirm||a.back||a.dash||a.throw||a.home||a.pause)&&this.wake())return true;
+    if((a.move||a.navY||a.jump||a.confirm||a.back||a.dash||a.throw||a.home||a.pause)&&this.wake())return true;
     if(a.back&&this.admin){sfx('UI-03');this.act('records-back');return true;}
     if(a.back&&this.controls&&this.menu){sfx('UI-03');this.act('controls-back');return true;}
     if(a.home||a.pause){sfx('UI-04');this.admin=false;this.armed='';this.controls=false;if(!this.menu)this.returnFocus=(document.activeElement as HTMLElement)?.dataset.action;this.menu=!this.menu;if(this.menu)this.scene.run?.pause();else this.scene.run?.resume();this.scene.fixed?.reset();this.render();if(!this.menu)focus(this.ui,0,this.returnFocus);return true;}
@@ -207,15 +207,28 @@ export class StationUI {
     }
     return !gameplay;
   }
+  /** The kiosk is pad-only, so the tutorial names the active profile's button: face buttons and the stick as icons. */
+  padKey(a:Action|'move'){
+    const pad=this.pad,std=!pad||pad.mapping==='standard',i=a==='move'?undefined:((pad&&profileFor(pad))||STANDARD).buttons[a]?.[0];
+    const name=a==='move'?'左搖桿':i===undefined?'—':std?PAD_NAMES[i]??`按鍵 ${i}`:`按鍵 ${i}`;
+    return `<kbd aria-label="${name}">${(a==='move'?icon('stick'):std&&i!==undefined&&icon('pad-'+i))||name}</kbd>`;
+  }
   lessons(){
     const l=this.scene?.level,has=(k:string)=>!!l&&(k==='laptop'?l.powerups.some(p=>p.kind==='laptop'):k==='enemy'?l.enemies.length>0:k==='badge'?l.badges.length>0:l.terrain.some(t=>t.kind==='bounce'));
-    return [['移動','MOVE','← →'],['跳躍','JUMP','Z'],['雙段跳','DOUBLE JUMP','Z ×2'],['衝刺','DASH','X'],
-      ...(has('badge')?[['徽章','BADGE','接觸收集']]:[]),...(has('laptop')?[['攻擊道具','ITEM','接觸取得'],['投擲','THROW','C']]:[]),
-      ...(has('enemy')?[['踩擊','STOMP','跳躍踩敵']]:[]),...(has('bounce')?[['彈跳板','BOUNCE PAD','站上彈起']]:[])];
+    const k=(a:Action|'move')=>this.padKey(a),t=(s:string)=>`<kbd>${s}</kbd>`;
+    return [['移動','MOVE',k('move')],['跳躍','JUMP',k('jump')],['雙段跳','DOUBLE JUMP',k('jump')+' ×2'],['衝刺','DASH',k('dash')],
+      ...(has('badge')?[['徽章','BADGE',t('接觸收集')]]:[]),...(has('laptop')?[['攻擊道具','ITEM',t('接觸取得')],['投擲','THROW',k('throw')]]:[]),
+      ...(has('enemy')?[['踩擊','STOMP',t('跳躍踩敵')]]:[]),...(has('bounce')?[['彈跳板','BOUNCE PAD',t('站上彈起')]]:[])];
   }
   update(){
     const now=performance.now(),delta=now-this.previous;this.previous=now;
-    if(this.menu){this.entered+=delta;if(this.countdownAt)this.countdownAt+=delta;}
+    if(this.menu){this.entered+=delta;this.idleSince+=delta;if(this.countdownAt)this.countdownAt+=delta;}
+    if(ABANDONABLE.includes(this.flow.flow)&&!this.menu&&!this.countdownAt){
+      const idle=now-this.idleSince;
+      if(idle>=SESSION_IDLE+SESSION_WARN){this.abandon();return;}
+      if(idle>=SESSION_IDLE&&!this.idleWarn){this.idleWarn=true;this.render();}
+      if(this.idleWarn)text(this.ui,'idle-count',Math.ceil((SESSION_IDLE+SESSION_WARN-idle)/1000));
+    }
     // Clicking empty space, or clicking back in from another window, drops DOM focus. A stick cannot click it back and
     // confirm acts on the focused button, so put focus back (inside the open panel) whenever a menu screen has none.
     if(this.menu||!['P3','P4'].includes(this.flow.flow)){const root=this.ui.querySelector<HTMLElement>('.modal.screen')??this.ui;if(!root.contains(document.activeElement))focus(root,0,this.lastFocus);}
@@ -293,7 +306,7 @@ export class StationUI {
   }
   /** Shared v2 frame: brand + stage name + status chips on top, key hints at the bottom. */
   shell(title:string,en:string,body:string,classes='',chips=''){
-    return `<div class="screen ${classes}" data-screen="${this.flow.flow}"><i class="floor"></i><header class="top">${BRAND}${title?`<div class="stage-name">${title}<small>${en}</small></div>`:''}</div><div class="status">${chips}</div></header>${body}<div class="hints">${HINTS[this.flow.flow]??NAV}</div><div class="hints-right">Republic of Gamers · 本機成績 · 示範排隊</div></div>`;
+    return `<div class="screen ${classes}" data-screen="${this.flow.flow}"><i class="floor"></i><header class="top">${BRAND}${title?`<div class="stage-name">${title}<small>${en}</small></div>`:''}</div><div class="status">${chips}</div></header>${body}<div class="hints">${this.flow.flow==='P3'?([['move','移動'],['jump','跳躍'],['dash','衝刺'],['throw','投擲'],['confirm','開始遊戲'],['home','選單']] as const).map(([a,s])=>`<span>${this.padKey(a)}${s}</span>`).join(''):NAV}</div><div class="hints-right">Republic of Gamers · 本機成績 · 示範排隊</div></div>`;
   }
   get item(){return ATTACK_ITEMS.find(i=>i.src===this.adapter.current?.attackItem)??ATTACK_ITEMS[0];}
   render(){
@@ -311,23 +324,23 @@ export class StationUI {
         const lessons=this.game.scene.isActive('Gameplay')&&this.scene.session?.tutorial?this.lessons():[];
         const g=this.adapter.current?.generation;
         const gen=g&&g.state!=='none'?`<div class="gen" data-state="${g.state}"><span id="gen-status" role="status">${genText(this.adapter.current)}</span><progress id="gen-progress" class="progress" aria-label="專屬角色生成進度" max="1" value="${g.state==='generating'?0:1}"></progress></div>`:'';
-        body=this.shell('新手訓練場','TUTORIAL SANDBOX',`<section class="panel player">${avatar(character,'idle',skinOf(this.adapter.current).poses.idle)}<div class="who">${nickname}<small>${characterName(character)} · ${escape(this.item.name)}</small></div>${gen}<div class="load"><span><span id="loading" role="status">載入中</span><b id="load-pct">0%</b></span><progress class="progress" aria-label="素材載入進度" max="1" value="0"></progress></div><div class="go">${button('start-game','開始遊戲','START',true,'primary','next')}</div></section><div class="sandbox"><span class="label"><i></i>LIVE TRAINING · 自由練習</span><div id="countdown" class="cd"></div></div><div class="lessons"><div class="head"><b>新手訓練清單</b><small>TUTORIAL CHECKLIST</small><span id="tutorial-progress"></span></div><div class="lesson-grid" style="grid-template-columns:repeat(${Math.max(1,lessons.length)},1fr)">${lessons.map(([zh,en,key])=>`<div class="lesson" data-lesson="${zh}"><b>${zh}<small>${en}</small></b><kbd>${key}</kbd><small class="lesson-state">尚未開始</small></div>`).join('')}</div></div>`,'tutorial',who);break;
+        body=this.shell('新手訓練場','TUTORIAL SANDBOX',`<section class="panel player">${avatar(character,'idle',skinOf(this.adapter.current).poses.idle)}<div class="who">${nickname}<small>${characterName(character)} · ${escape(this.item.name)}</small></div>${gen}<div class="load"><span><span id="loading" role="status">載入中</span><b id="load-pct">0%</b></span><progress class="progress" aria-label="素材載入進度" max="1" value="0"></progress></div><div class="go">${button('start-game','開始遊戲','START',true,'primary','next')}</div></section><div class="sandbox"><span class="label"><i></i>LIVE TRAINING · 自由練習</span><div id="countdown" class="cd"></div></div><div class="lessons"><div class="head"><b>新手訓練清單</b><small>TUTORIAL CHECKLIST</small><span id="tutorial-progress"></span></div><div class="lesson-grid" style="grid-template-columns:repeat(${Math.max(1,lessons.length)},1fr)">${lessons.map(([zh,en,key])=>`<div class="lesson" data-lesson="${zh}"><b>${zh}<small>${en}</small></b>${key}<small class="lesson-state">尚未開始</small></div>`).join('')}</div></div>`,'tutorial',who);break;
       }
       case 'P4':body=hud(this.adapter.current?.attackItem??ATTACK_ITEMS[0].src);break;
       case 'P5':{
         const r=this.result,goal=r?.endReason==='goal';
         // NEW RECORD above the best other run on this board, or the first run on an empty board (PO 2026-11-04); P6 does not repeat it.
         const best=r?this.adapter.board(this.tier).find(x=>x.runId!==r.runId)?.score:undefined,record=!!r&&(best===undefined||r.score>best);
-        body=this.shell('實驗室 LABORATORY STAGE','SIDE SCROLLING MISSION',`<div class="goal-burst"></div><img class="goal-art" src="${skinOf(this.adapter.current).poses[goal?'jump':'idle']}" alt=""><h1 class="goal-title">${goal?'GOAL!':'TIME UP'}</h1><div class="goal-sub"><h2>${goal?'任務完成！':'時間到！'}</h2><small>${goal?'MISSION CLEAR':'CHALLENGE OVER'}</small></div>${panel('本次成績<small>MISSION REPORT</small>',statRow('star','分數','SCORE',(r?.score??0).toLocaleString(),'gold')+statRow('clock',goal?'通關時間':'遊玩時間',goal?'CLEAR TIME':'PLAY TIME',time(r?r.duration-r.remainingTime:0),'',record?'<span class="tag">NEW RECORD</span>':'')+statRow('badge','持有徽章','BADGES HELD',r?.heldBadgeCount??0,'',`<small> / ${this.scene?.level?.badges.length??'—'}</small>`)+statRow('combo','最高連擊','MAX COMBO',r?.playerStatistics.maxCombo??0)+`<div class="report-title">${titleTag([(r&&titles(r)[0])||'超新星'])}</div><div class="foot"><span>即將進入本場結果 · ${goal?5:3} 秒</span><small>AUTO →</small></div>`,'report')}<div class="actions">${button('goal-retry','再挑戰','RETRY',!this.adapter.replayEnabled,'','retry')}${button('next-stage','下一關','COMING SOON',true,'','next')}${this.adapter.current?.captureStarted?'':button('exit','返回選單','BACK TO MENU',false,'primary','home')}</div>`,`mission ${goal?'goal':'time-up'}`,who);break;
+        body=this.shell('實驗室 LABORATORY STAGE','SIDE SCROLLING MISSION',`<div class="goal-burst"></div><img class="goal-art" src="${skinOf(this.adapter.current).poses[goal?'jump':'idle']}" alt=""><h1 class="goal-title">${goal?'GOAL!':'TIME UP'}</h1><div class="goal-sub"><h2>${goal?'任務完成！':'時間到！'}</h2><small>${goal?'MISSION CLEAR':'CHALLENGE OVER'}</small></div>${panel('本次成績<small>MISSION REPORT</small>',statRow('star','分數','SCORE',(r?.score??0).toLocaleString(),'gold')+statRow('clock',goal?'通關時間':'遊玩時間',goal?'CLEAR TIME':'PLAY TIME',time(r?r.duration-r.remainingTime:0),'',record?'<span class="tag">NEW RECORD</span>':'')+statRow('badge','持有徽章','BADGES HELD',r?.heldBadgeCount??0,'',`<small> / ${this.scene?.level?.badges.length??'—'}</small>`)+statRow('combo','最高連擊','MAX COMBO',r?.playerStatistics.maxCombo??0)+`<div class="report-title">${titleTag([(r&&titles(r)[0])||'超新星'])}</div><div class="foot"><span>即將進入本場結果 · ${goal?5:3} 秒</span><small>AUTO →</small></div>`,'report')}<div class="actions">${button('goal-retry','再挑戰','RETRY',!this.adapter.replayEnabled,'','retry')}${button('next-stage','下一關','COMING SOON',true,'','next')}${button('exit','返回選單','BACK TO MENU',false,'primary','home')}</div>`,`mission ${goal?'goal':'time-up'}`,who);break;
       }
       case 'P6':{
         const r=this.result!,st=r.playerStatistics,goal=r.endReason==='goal';
-        body=this.shell('本場結果','BATTLE RESULT',`<div class="result-columns">${panel('戰鬥數據<small>STATISTICS</small>',`<div class="who">${avatar(character,'idle',skinOf(this.adapter.current).poses.idle)}<div><strong>${nickname}</strong><small>${characterName(character)} · ${escape(this.item.name)}</small></div></div>`+statRow('badge','持有徽章','BADGES',r.heldBadgeCount)+statRow('skull','擊敗敵人','ENEMY KILLS',st.kills)+statRow('combo','最高連擊','MAX COMBO',st.maxCombo)+statRow('clock',goal?'通關時間':'遊玩時間',goal?'CLEAR TIME':'PLAY TIME',time(r.duration-r.remainingTime))+statRow('bounce','彈跳次數','BOUNCES',st.bounces)+statRow('bolt','攻擊道具擊倒','ITEM KNOCKOUTS',st.bolts),'blue')}${panel('本場結果<small>RESULT</small>',`<div class="verdict"><div class="word ${goal?'':'finished'}">${goal?'CLEAR!':'FINISHED'}<small>MISSION DEBRIEF</small></div>${avatar(character,'attack',skinOf(this.adapter.current).poses.attack)}${titleTag(titleLine(r))}</div><div class="breakdown">${Object.entries(r.scoreBreakdown).map(([k,v])=>statRow('',({enemy:'敵人（含 Combo）',badges:'持有徽章 ×10',goal:'通關',time:'剩餘秒數 ×2',noDrop:'零掉落通關'} as Record<string,string>)[k]??k,'',`+${v.toLocaleString()}`)).join('')}</div><div class="score-box"><span>YOUR SCORE</span><strong class="big-score">${r.score.toLocaleString()}</strong></div>`,'verdict-panel')}${panel(`排行榜<small>${this.tier} S · LOCAL</small>`,this.ranking()+`<div class="rank-foot"><span>角色牆已更新 · ${this.adapter.wall.size} 位</span><span>本機成績</span></div>`,'blue board-panel')}</div><div class="actions">${button('ranking','完整排行','TOP 20',false,'','list')}${button('result','繼續','CONTINUE',false,'primary','next')}</div>`,'',who);break;
+        body=this.shell('本場結果','BATTLE RESULT',`<div class="result-columns">${panel('戰鬥數據<small>STATISTICS</small>',`<div class="who">${avatar(character,'idle',skinOf(this.adapter.current).poses.idle)}<div><strong>${nickname}</strong><small>${characterName(character)} · ${escape(this.item.name)}</small></div></div>`+statRow('badge','持有徽章','BADGES',r.heldBadgeCount)+statRow('skull','擊敗敵人','ENEMY KILLS',st.kills)+statRow('combo','最高連擊','MAX COMBO',st.maxCombo)+statRow('clock',goal?'通關時間':'遊玩時間',goal?'CLEAR TIME':'PLAY TIME',time(r.duration-r.remainingTime))+statRow('bounce','彈跳次數','BOUNCES',st.bounces)+statRow('bolt','攻擊道具擊倒','ITEM KNOCKOUTS',st.bolts),'blue')}${panel('本場結果<small>RESULT</small>',`<div class="verdict"><div class="word ${goal?'':'finished'}">${goal?'CLEAR!':'FINISHED'}<small>MISSION DEBRIEF</small></div>${avatar(character,'attack',skinOf(this.adapter.current).poses.attack)}${titleTag(titleLine(r))}</div><div class="breakdown">${Object.entries(r.scoreBreakdown).map(([k,v])=>statRow('',({enemy:'敵人（含 Combo）',badges:'持有徽章 ×10',goal:'通關',time:'剩餘秒數 ×2',noDrop:'零掉落通關'} as Record<string,string>)[k]??k,'',`+${v.toLocaleString()}`)).join('')}</div><div class="score-box"><span>YOUR SCORE</span><strong class="big-score">${r.score.toLocaleString()}</strong></div>`,'verdict-panel')}${panel(`排行榜<small>${this.tier} S · LOCAL</small>`,this.ranking()+`<div class="rank-foot"><span>本機成績</span></div>`,'blue board-panel')}</div><div class="actions">${button('ranking','完整排行','TOP 20',false,'','list')}${button('result','繼續','CONTINUE',false,'primary','next')}</div>`,'',who);break;
       }
       case 'P7':{
         const on=this.adapter.replayEnabled,next=this.adapter.queue[1];
         body=this.boardOpen?this.shell('榮耀排行榜','TOP 20 · LOCAL RECORDS',this.leaderboard()+`<div class="actions">${button('close-ranking','返回','BACK',false,'','exit')}</div>`,'board-screen',who):
-          this.shell('再來一場','PLAY AGAIN',`<img class="again-left" src="${skinOf(this.adapter.current).poses.attack}" alt=""><img class="again-right" src="/assets/ui/enemy-dog.png" alt=""><section class="panel again"><h1>再來一場？<small>PLAY AGAIN?</small></h1><div class="actions">${button('replay','再玩一場','PLAY AGAIN',!on||!!this.countdownAt,on?'primary':'','retry')}${this.adapter.current?.captureStarted?button('next-player','下一位玩家','NEXT PLAYER',false,on?'':'primary','next'):button('exit','結束','EXIT',false,on?'':'primary','exit')}</div><div class="secondary">${button('ranking','查看排行榜','TOP 20',false,'ghost')}</div></section><div class="next"><div class="lbl">下一位<small>NEXT PLAYER</small></div><span class="arr">»</span>${next?`<img src="${pose(next.characterId)}" alt="">`:''}<strong>${escape(next?.nickname??'目前無玩家等待')}</strong></div>${this.countdownAt?'<div class="modal countdown-layer" role="status"><b id="countdown">3</b></div>':''}`,'replay-screen',who);break;
+          this.shell('再來一場','PLAY AGAIN',`<img class="again-left" src="${skinOf(this.adapter.current).poses.attack}" alt=""><img class="again-right" src="/assets/ui/enemy-dog.png" alt=""><section class="panel again"><h1>再來一場？<small>PLAY AGAIN?</small></h1><div class="actions">${button('replay','再玩一場','PLAY AGAIN',!on||!!this.countdownAt,on?'primary':'','retry')}${button('exit','回到主選單','HOME',false,on?'':'primary','home')}</div><div class="secondary">${button('ranking','查看排行榜','TOP 20',false,'ghost')}</div></section><div class="next"><div class="lbl">下一位<small>NEXT PLAYER</small></div><span class="arr">»</span>${next?`<img src="${pose(next.characterId)}" alt="">`:''}<strong>${escape(next?.nickname??'目前無玩家等待')}</strong></div>${this.countdownAt?'<div class="modal countdown-layer" role="status"><b id="countdown">3</b></div>':''}`,'replay-screen',who);break;
       }
       default:body=`<div class="screen transparent" data-screen="${this.flow.flow}"></div>`;
     }
@@ -340,10 +353,11 @@ export class StationUI {
       const pad=this.pad,p=pad?profileFor(pad):null,name=(i:number)=>(pad?.mapping==='standard'&&PAD_NAMES[i])||`按鍵 ${i}`;
       body+=`<div class="modal screen" role="dialog" aria-modal="true" aria-label="按鍵設定"><section class="panel menu"><h2>按鍵設定<small>CONTROLS · 搖桿上下選動作 → 確認 → 按下要用的按鍵</small></h2>${p?REBINDABLE.map(a=>this.binding===a?button('bind-'+a,'請按下按鍵…','PRESS A BUTTON · 返回／OPTIONS 取消',false,'primary'):button('bind-'+a,CONTROL_LABELS[a],p.buttons[a]?.map(name).join(' / ')||'未設定')).join(''):'<p class="empty-state">未偵測到搖桿<br><small>請先按一下搖桿上的任一按鍵</small></p>'}${button('controls-reset','恢復預設','RESET TO DEFAULT',!p,'','retry')}${button('controls-back','返回','BACK',false,'','exit')}</section></div>`;
     }
-    else if(this.menu)body+=`<div class="modal screen" role="dialog" aria-modal="true" aria-label="系統選單"><section class="panel menu"><h2>系統選單<small>SYSTEM MENU</small></h2>${(this.adapter.current?.captureStarted||['P3','P4','P5','P6','P7'].includes(this.flow.flow)||this.flow.flow==='P0'&&this.returnFocus==='settings')?button('continue','繼續','CONTINUE',false,'primary','next'):''}${this.flow.flow==='P4'?button('restart','重新開始','RESTART',false,'','retry'):''}${this.adapter.current?.captureStarted?'':button('exit','回到主畫面','HOME',false,'','home')}${button('controls','按鍵設定','CONTROLS',false,'','list')}${this.flow.flow==='P0'?button('settings-replay',`再挑戰：${this.adapter.replayEnabled?'開啟':'關閉'}`,'REPLAY SETTING',false,'','list')+button('settings-time',`遊戲時間：${this.tier} 秒`,'TIME SETTING',false,'','clock')+button('records','排行榜管理','RECORDS',false,'','list'):''}</section></div>`;
+    else if(this.menu)body+=`<div class="modal screen" role="dialog" aria-modal="true" aria-label="系統選單"><section class="panel menu"><h2>系統選單<small>SYSTEM MENU</small></h2>${(this.adapter.current?.captureStarted||['P3','P4','P5','P6','P7'].includes(this.flow.flow)||this.flow.flow==='P0'&&this.returnFocus==='settings')?button('continue','繼續','CONTINUE',false,'primary','next'):''}${this.flow.flow==='P4'?button('restart','重新開始','RESTART',false,'','retry'):''}${this.locked?'':button('exit','回到主畫面','HOME',false,'','home')}${button('controls','按鍵設定','CONTROLS',false,'','list')}${this.flow.flow==='P0'?button('settings-replay',`再挑戰：${this.adapter.replayEnabled?'開啟':'關閉'}`,'REPLAY SETTING',false,'','list')+button('settings-time',`遊戲時間：${this.tier} 秒`,'TIME SETTING',false,'','clock')+button('records','排行榜管理','RECORDS',false,'','list'):''}</section></div>`;
+    if(this.idleWarn)body+='<div class="modal countdown-layer idle-warn" role="alert"><b id="idle-count">10</b><p>即將返回首頁<small>按任意鍵繼續</small></p></div>';
     this.ui.innerHTML=body;this.syncCamera();
     // Gameplay screens keep DOM focus off buttons so Z/Enter reach the game, not a focused START.
-    if(this.menu||!['P3','P4'].includes(this.flow.flow))focus(this.ui.querySelector<HTMLElement>('.modal.screen')??this.ui,0,this.menu?'continue':this.flow.flow==='P1'?(onPhoto(this.adapter.current,this.step,this.comfy)&&!this.adapter.current?.photo&&!this.camError?'shoot':'ready'):this.flow.flow==='P5'?'exit':this.flow.flow==='P6'?'result':this.flow.flow==='P7'?(this.adapter.current?.captureStarted?'next-player':'exit'):undefined);
+    if(this.menu||!['P3','P4'].includes(this.flow.flow))focus(this.ui.querySelector<HTMLElement>('.modal.screen')??this.ui,0,this.menu?'continue':this.flow.flow==='P1'?(onPhoto(this.adapter.current,this.step,this.comfy)&&!this.adapter.current?.photo&&!this.camError?'shoot':'ready'):this.flow.flow==='P5'?'exit':this.flow.flow==='P6'?'result':this.flow.flow==='P7'?'exit':undefined);
   }
   /** Open the camera while a live viewfinder is on screen, release it as soon as none is. */
   syncCamera(){

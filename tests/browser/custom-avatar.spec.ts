@@ -124,8 +124,8 @@ test('P3 waits for the custom character, swaps it in place and carries it into t
   const run=await page.evaluate(()=>{const p=(window as any).__gameplay.presentation;return{custom:p.skin.custom,role:p.skin.role,key:p.sprite.texture.key};});
   expect(run.custom).toBe(true);expect(run.role).toBe('S2AM');expect(run.key).toMatch(/^P[0-9a-f]{12}\//);
   await page.evaluate(()=>{const u=(window as any).__station;u.result=u.scene.session.finish('goal');u.adapter.save(u.result);});
-  const saved=await page.evaluate(()=>{const u=(window as any).__station,row=JSON.parse(localStorage.getItem('rog-future-gamer.records.v1')!).records[0];return{row,wall:u.adapter.wall.get(u.adapter.current.sessionId).look};});
-  expect(Object.keys(saved.row).some(k=>/photo|look|skin/.test(k))).toBe(false);expect(saved.row.characterId).toBe('S2AM');expect(saved.wall).toMatch(/^data:image\/webp/);
+  const saved=await page.evaluate(()=>{const row=JSON.parse(localStorage.getItem('rog-future-gamer.records.v1')!).records[0];return{row};});
+  expect(Object.keys(saved.row).some(k=>/photo|look|skin/.test(k))).toBe(false);expect(saved.row.characterId).toBe('S2AM');
   expect(errors).toEqual([]);
 });
 
@@ -235,7 +235,7 @@ test('character art is never shown above its natural resolution, and the game re
   expect(await drawn()).toEqual({dx:0,dy:0,dr:0,db:0});
 });
 
-test('captured player stays in the run and hands off to a fresh character selection after results',async({page})=>{
+test('captured player stays in the run, then any end-of-run exit returns to the start screen',async({page})=>{
   const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
   await page.addInitScript(fakeCamera);const s=await comfy(page);
   await submitAndEnterP3(page);s.status['prompt-1']='success';
@@ -249,12 +249,13 @@ test('captured player stays in the run and hands off to a fresh character select
   await expect(page.locator('[data-screen=P4]')).toBeVisible();
   await expect(page.locator('[data-action=exit]')).toHaveCount(0);
   await page.evaluate(()=>{const u=(window as any).__station;u.result=u.scene.session.finish('goal');u.go('P5');});
-  await expect(page.locator('[data-action=exit]')).toHaveCount(0);
+  await expect(page.locator('[data-action=exit]')).toBeVisible();
   await expect(page.locator('[data-screen=P6]')).toBeVisible({timeout:8000});
   await page.locator('[data-action=result]').click();
-  await page.locator('[data-action=next-player]').click();
-  await expect(page.locator('[data-screen=P1]')).toBeVisible();
-  await expect(page.locator('[data-action=prev]')).toBeEnabled();
+  await expect(page.locator('[data-action=exit]')).toContainText('回到主選單');await expect(page.locator('[data-action=exit]')).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('[data-screen=P0]')).toBeVisible();
+  expect(await page.evaluate(()=>(window as any).__station.adapter.queue.length)).toBe(0);
   expect(errors).toEqual([]);
 });
 test('reference entry opens settings, ranking and preparation',async({page})=>{

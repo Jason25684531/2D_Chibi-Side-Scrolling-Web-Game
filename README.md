@@ -8,6 +8,8 @@
 
 ## 快速開始
 
+版控只含程式、`Audio/` 音效與 `openspec/`。美術來源（`1102_關卡編輯器/`、`assest/`、`ComfyUI_API/`）與字型原檔不進版控，需另外取得並放在專案根目錄，再跑 `npm run assets:stage` 產生 `public/`。沒有這些檔案時，`npm run build` 仍可通過，但遊戲沒有美術，`tests/unit/comfy.test.ts` 也會因讀不到 `assest/preset_*` 而失敗。
+
 | 指令 | 用途 |
 |---|---|
 | `npm install` | 安裝依賴 |
@@ -212,7 +214,8 @@ flowchart LR
 | `tests/browser/` | Playwright：移動、地形、斜坡、徽章、Station、UIUX 等 |
 | `tools/` | 素材整理腳本（`stage-assets.py`、`subset-fonts.py`） |
 | `docs/` | 需求審查、素材盤點、測試設定、UIUX 報告、交付紀錄 |
-| `openspec/specs/` | 12 項能力規格（runtime、player-input、physics-terrain、enemy、station-ui…） |
+| `Audio/` | 39 個音效與對照表（`src/audio/sfx.ts` 直接引用） |
+| `openspec/specs/` | 能力規格（runtime、player-input、physics-terrain、enemy、station-ui…） |
 
 ---
 

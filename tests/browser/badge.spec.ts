@@ -15,7 +15,7 @@ test('package badge art, cap twelve, moving drops, recovery and expiry',async({p
   await page.evaluate(()=>{const s=(window as any).__gameplay;s.body.reset(1500,100);});
   // One arc, one bounce, then rest on the surface below: resting drops never move again.
   await page.waitForTimeout(1500);
-  const rested=()=>page.evaluate(()=>{const s=(window as any).__gameplay;return [...s.badges.drops.entries()].filter(([,d]:any)=>d.rest).map(([id,d]:any)=>{const o=s.badges.objects.get(id);return{id,x:o.x,y:o.y,bounced:d.bounced,onGround:Math.abs(o.y+o.displayHeight/2-s.terrain.groundY(o.x,o.y))<1};});});
+  const rested=()=>page.evaluate(()=>{const s=(window as any).__gameplay;return [...s.badges.drops.entries()].filter(([,d]:any)=>d.rest).map(([id,d]:any)=>{const o=s.badges.objects.get(id);return{id,x:d.x,y:d.y,bounced:d.bounced,onGround:Math.abs(d.y+o.displayHeight/2-s.terrain.groundY(d.x,d.y))<1};});}); // logic position: the image is drawn between steps for a few frames after landing
   const first=await rested();expect(first.length).toBeGreaterThan(0);expect(first.every(d=>d.bounced&&d.onGround)).toBe(true);
   await page.waitForTimeout(300);expect((await rested()).filter(d=>first.some(f=>f.id===d.id))).toEqual(first);
   await page.waitForTimeout(3300);

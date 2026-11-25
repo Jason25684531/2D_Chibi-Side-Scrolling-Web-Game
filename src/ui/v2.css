@@ -318,3 +318,5 @@ kbd{margin-right:10px;padding:4px 10px;border:1px solid var(--rog-line);backgrou
 /* P3 custom character status under the player name. */
 .player .gen{margin:8px 24px 0;display:grid;gap:6px;font:600 18px var(--font-zh);color:var(--rog-muted)}.player .gen[data-state=ready]{color:var(--rog-gold,#ffd54f)}.player .gen[data-state=failed]{color:var(--rog-red)}.player .gen .progress{width:100%}
 .player:has(.gen) .avatar{height:200px}
+
+kbd .ic{width:1.35em;height:1.35em;vertical-align:-.35em;stroke:currentColor;stroke-width:2}

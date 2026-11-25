@@ -55,18 +55,19 @@ export class CharacterView {
   /** Swap art mid-run (the custom character arriving in P3); position, facing and the current action's clock carry over. */
   setSkin(skin:CharacterSkin){this.skin=skin;}
   attack(now:number){this.attackAt=now;}
-  update(state:string,facing:number,now:number,power:PowerView={ally:0,since:0,hit:-9,blink:false}) {
+  /** at: where to draw the body centre this frame (between logic steps); defaults to the collision box. */
+  update(state:string,facing:number,now:number,power:PowerView={ally:0,since:0,hit:-9,blink:false},at:{x:number;y:number}=this.box) {
     const a=this.skin.actions,attacking=this.attackAt>=0&&now-this.attackAt<a.attack.frameCount/a.attack.fps;
     const name=attacking?'attack':ACTION[state]??'idle';if(name!==this.action){this.action=name;this.since=now;}
     const act=a[name],i=Math.floor((now-this.since)*act.fps),frame=attacking?Math.min(i,act.frameCount-1):i%act.frameCount;
-    const cal=CALIBRATION[this.skin.role],bottom=this.box.y+this.box.displayHeight/2,big=power.ally?ALLY_SCALE:1;
-    this.sprite.setTexture(sheetKey(this.skin,name),frame).setOrigin(cal.cx,cal.foot).setPosition(this.box.x,bottom);
+    const cal=CALIBRATION[this.skin.role],bottom=at.y+this.box.displayHeight/2,big=power.ally?ALLY_SCALE:1;
+    this.sprite.setTexture(sheetKey(this.skin,name),frame).setOrigin(cal.cx,cal.foot).setPosition(at.x,bottom);
     // Idle faces the camera: mirroring it would only flip the jacket print.
     this.sprite.setScale(BODY_CELLS*T/(cal.body*this.sprite.frame.height)*big).setFlipX(facing<0&&name!=='idle').setAngle(state==='DASH'?facing*6:0);
     // Editor: after a hit / respawn (1.5 s protection) the player blinks; the shield blinks with it.
     this.sprite.setVisible(!(power.blink&&Math.sin(now*40)>0));
     const h=this.box.displayHeight*big;
-    if(power.ally&&this.sprite.visible)this.shield.draw(this.box.x,bottom-h/2,h*level.itemArt.shield.w,now,{ph:power.since,left:power.ally,flash:Math.max(0,1-(now-power.hit)/.35)});
+    if(power.ally&&this.sprite.visible)this.shield.draw(at.x,bottom-h/2,h*level.itemArt.shield.w,now,{ph:power.since,left:power.ally,flash:Math.max(0,1-(now-power.hit)/.35)});
     else this.shield.hide();
   }
 }

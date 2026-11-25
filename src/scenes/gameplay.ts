@@ -20,6 +20,7 @@ import {levelArt} from '../assets/level-art';
 import {playerFx} from '../assets/player-fx';
 import level from '../level/data/level.json';
 import {sfx,hold,stopHeld,listen} from '../audio/sfx';
+const pose=(o:Phaser.GameObjects.Image)=>[o.x,o.y,o.rotation];
 export class GameplayScene extends Phaser.Scene {
   run!: RunStateManager;
   flow!: GameplayStateMachine;
@@ -38,6 +39,16 @@ export class GameplayScene extends Phaser.Scene {
   goal!:Phaser.GameObjects.Rectangle;attackItem=ATTACK_ITEMS[0].src;shockUntil=0;stompFx={x:0,y:0,t0:-9};
   menu=-1;lastMove=0;menuView!:Phaser.GameObjects.Text;menuMask!:Phaser.GameObjects.Rectangle;
   private frameTime=0;
+  /** Logic state before / after the last step. Render draws between them (shown); collisions only ever read the body.
+   *  A pause freezes what is shown; the resume draws on from there. */
+  private from={x:0,y:0,cx:0,cy:0};private to=this.from;private shown=this.from;private lerped=false;private held=false;
+  private mark(){const c=this.cameras.main;return{x:this.player.x,y:this.player.y,cx:c.scrollX,cy:c.scrollY};}
+  /** Art the systems place once per logic step (enemies, badges, thrown items): pose before (f) and after (t) that step. */
+  private movers=new Map<Phaser.GameObjects.Image,{f:number[];t:number[]}>();
+  /** Where art spawned mid-step (a thrown item, a scattered badge) was created: its first step is drawn from there. */
+  private born=new Map<Phaser.GameObjects.GameObject,number[]>();
+  private onBorn=(o:Phaser.GameObjects.GameObject)=>{if(o instanceof Phaser.GameObjects.Image)this.born.set(o,pose(o));};
+  private art(){return [...this.enemies.enemies.map(e=>e.sprite),...this.badges.objects.values(),...this.enemies.bolts.map(b=>b.image)];}
   level=LEVEL;
   constructor() { super('Gameplay'); }
   create(data:{duration?:number;sessionId?:string;skin?:CharacterSkin;attackItem?:string;tutorial?:boolean;flow?:GameplayStateMachine}={}) {
@@ -80,13 +91,14 @@ export class GameplayScene extends Phaser.Scene {
     this.hud.setVisible(!this.registry.get('station'));
     this.menu=-1;this.lastMove=0;this.menuMask=this.add.rectangle(P.width/2,P.height/2,P.width,P.height,0x000000,.8).setScrollFactor(0).setDepth(200).setVisible(false);
     this.menuView=this.add.text(P.width/2,P.height/2,'',{fontSize:'28px',color:'#ffffff',align:'center'}).setOrigin(.5).setScrollFactor(0).setDepth(201);
-    this.events.once('shutdown',()=>{ this.inputAdapter.dispose(); this.session.dispose(); stopHeld(); });
+    this.lerped=this.held=false;this.from=this.to=this.shown=this.mark();this.movers.clear();this.born.clear();this.events.on('addedtoscene',this.onBorn);
+    this.events.once('shutdown',()=>{ this.events.off('addedtoscene',this.onBorn); this.inputAdapter.dispose(); this.session.dispose(); stopHeld(); });
     (window as any).__gameplay=this;
   }
   clearInput() { this.inputAdapter.clear(); this.pending={jump:false,dash:false,throw:false,down:false}; }
   togglePause() { if(this.run.phase==='paused') this.run.resume(); else this.run.pause(); this.fixed.reset(); this.clearInput(); }
   home() { this.run.pause(); this.clearInput(); this.flow.transition('P0'); this.scene.stop(); }
-  // UX p14 Home menu: Restart only before the Result is settled. ponytail: confirm = Jump until B10 maps the arcade confirm button.
+  // UX p14 Home menu (debug only): Restart only before the Result is settled; confirm = Jump.
   menuOptions() { return this.session.result ? ['繼續','回到主畫面'] : ['繼續','重新開始','回到主畫面']; }
   setMenu(open:boolean) { if(open){this.menu=0;this.run.pause();} else {this.menu=-1;this.run.resume();} this.fixed.reset(); this.clearInput(); }
   /** Returns true when the menu consumed this frame's input. */
@@ -110,6 +122,7 @@ export class GameplayScene extends Phaser.Scene {
     this.body.reset(p.x,p.y);this.controller.reset();this.clearInput();
     this.badges.scatter(drops,p.x,p.y);
     this.enemies.reset();this.cameraManager.reset(p.x,p.y+P.bodyHeight/2);this.session.recovered();
+    this.from=this.mark(); // a respawn is a cut, not motion to draw
   }
   /** 0 beyond nearR cells from the portal, 1 within 1.5 cells, smoothstep (planning editor goalNear). */
   goalNear(){
@@ -126,6 +139,11 @@ export class GameplayScene extends Phaser.Scene {
   }
   update(_time: number,delta: number) {
     const now=performance.now();delta=now-this.frameTime;this.frameTime=now;
+    // Logic reads the step's own poses (badges keep theirs on the image), never last frame's in-between ones.
+    if(this.lerped&&this.run.phase!=='paused'){
+      for(const [o,m] of this.movers){if(this.held)m.f=pose(o);if(o.active)o.setPosition(m.t[0],m.t[1]).setRotation(m.t[2]);}
+      this.cameras.main.setScroll(this.to.cx,this.to.cy);this.lerped=false;
+    }
     // Before the station/menu early returns: pause, Result and menus must silence these. SYS-01 is 9.0 s, so it ends at 0.
     const live=this.run.phase==='running',timed=live&&!this.session.tutorial;
     hold('ENV-04',+timed);hold('PWR-07',+(live&&this.session.power.ally));hold('ENV-02',live?this.goalNear():0);hold('SYS-01',+(timed&&this.run.remaining>0&&this.run.remaining<=9));
@@ -141,6 +159,7 @@ export class GameplayScene extends Phaser.Scene {
     if(this.run.phase==='running')for(const k of ['jump','dash','throw','down'] as const)this.pending[k] ||= a[k];
     if(this.run.phase==='running') this.fixed.update(delta/1000,(dt,elapsed)=>{
       if(this.run.phase!=='running')return;
+      this.from=this.mark();for(const o of this.art())this.movers.set(o,{f:pose(o),t:pose(o)});
       this.session.tick(elapsed,true);
       this.terrain.update(dt);
       if(this.shockUntil){ // planning: hazard shock 0.6 s, frozen, then back to the last safe ground
@@ -166,8 +185,19 @@ export class GameplayScene extends Phaser.Scene {
       if(this.session.tutorial){const c=this.cameras.main,o=renderOffset(c);c.setScroll(Math.max(0,this.player.x-200)-o.x,Math.min(this.level.start.y-140,this.player.y-120)-o.y);}
       else this.cameraManager.update({x:this.player.x,top:this.body.top,bottom:this.body.bottom,vx:this.body.velocity.x,vy:this.body.velocity.y,grounded:this.body.blocked.down},dt,this.goalNear());
     });
-    const pw=this.session.power,t=this.run.elapsed;
-    this.presentation.update(this.shockUntil?'HURT':this.controller.state,this.controller.facing,t,{ally:pw.ally?pw.allyUntil-t:0,since:t-pw.allyAt,hit:this.enemies.shieldHit,blink:!this.shockUntil&&t<this.session.damage.immuneUntil});
+    if(this.run.phase!=='paused'){
+      this.to=this.mark();const live=new Set(this.art());
+      for(const o of this.movers.keys())if(!live.has(o))this.movers.delete(o);
+      for(const o of live){const m=this.movers.get(o),p=pose(o);if(m)m.t=p;else this.movers.set(o,{f:this.born.get(o)??p,t:p});}
+      this.born.clear();
+    }
+    const moving=this.run.phase==='running'&&!this.shockUntil,frozen=this.run.phase==='paused'&&this.lerped;
+    if(moving&&this.held)this.from=this.shown;this.held=frozen;
+    const pw=this.session.power,t=this.run.elapsed,f=this.from,g=this.to,k=moving?Math.min(1,this.fixed.accumulator*this.fixed.hz):1;
+    if(k<1){for(const [o,{f:a,t:b}] of this.movers)if(o.active)o.setPosition(a[0]+(b[0]-a[0])*k,a[1]+(b[1]-a[1])*k).setRotation(a[2]+Phaser.Math.Angle.Wrap(b[2]-a[2])*k);
+      const s=this.shown={x:f.x+(g.x-f.x)*k,y:f.y+(g.y-f.y)*k,cx:f.cx+(g.cx-f.cx)*k,cy:f.cy+(g.cy-f.cy)*k};this.cameras.main.setScroll(s.cx,s.cy);this.lerped=true;}
+    const at=frozen||k<1?this.shown:this.player;
+    this.presentation.update(this.shockUntil?'HURT':this.controller.state,this.controller.facing,t,{ally:pw.ally?pw.allyUntil-t:0,since:t-pw.allyAt,hit:this.enemies.shieldHit,blink:!this.shockUntil&&t<this.session.damage.immuneUntil},at);
     // Station mode hides the Phaser HUD; skip re-rasterising its text every frame.
     if(this.hud.visible)this.hud.setText(`TEST ONLY / ${this.fixed.hz}Hz\n${this.run.phase} · Timer ${this.run.remaining.toFixed(1)}\nBadge ${this.session.badges.held} · Score ${this.session.score.total} · Combo ${this.session.combo.count} ×${this.session.combo.multiplier}\nItem ${this.session.power.armed?weaponMode(this.attackItem).tag??'ON':'none'} · Ally ${this.session.power.ally?Math.ceil(this.session.power.allyUntil-this.run.elapsed):'-'}`);
   }

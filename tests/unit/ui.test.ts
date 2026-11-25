@@ -2,7 +2,7 @@ import {it,expect,vi} from 'vitest';
 import {InputAdapter} from '../../src/input/adapter';
 import {escape,button,time,titleTag} from '../../src/ui/components';
 import {readiness} from '../../src/ui/readiness';
-import {MockStation,titles,validRanking,WALL_MAX} from '../../src/ui/mock-station';
+import {MockStation,titles,validRanking} from '../../src/ui/mock-station';
 import {GameplaySession} from '../../src/core/session';
 it('escapes untrusted identity, supplies native disabled controls and formats timer',()=>{
   expect(escape('<script>"&')).toBe('&lt;script&gt;&quot;&amp;');
@@ -16,7 +16,7 @@ it('saves an attempt once and orders planning v0.3 titles by rarity',()=>{
   s.tick(40);s.stats.maxCombo=4;s.stats.stomps=5;s.stats.bolts=3;s.stats.bounces=4;
   for(let i=0;i<45;i++)s.pickup(String(i));
   const r=s.finish('goal')!;expect(titles(r)).toEqual(['零失誤大師','極速跑者','連段高手','閃電快手','踩擊達人','彈跳高手','徽章收藏家']);
-  a.save(r);a.save(r);expect(a.board(100)).toHaveLength(1);expect(a.board(90)).toHaveLength(0);expect(a.wall.size).toBe(1);
+  a.save(r);a.save(r);expect(a.board(100)).toHaveLength(1);expect(a.board(90)).toHaveLength(0);
   a.enqueue('Next');a.exit();expect(a.current.nickname).toBe('Next');
 });
 it('no earned title yields an empty list (shown as 超新星) and old records stay valid',()=>{
@@ -30,10 +30,7 @@ it('maps planning keys Z X C ↓ and keeps Confirm/Back',()=>{
   for(const [code,action] of [['KeyZ','jump'],['KeyX','dash'],['KeyC','throw'],['ArrowDown','down']] as const){const k=new InputAdapter();k.codes.add(code);expect(k.sample()[action]).toBe(true);}
   const pad=new InputAdapter();expect(pad.sample({mapping:'standard',axes:[],buttons:[{pressed:false},{pressed:false},{pressed:false},{pressed:true}]}).confirm).toBe(true);
 });
-it('keeps the newest WALL_MAX players on the wall and lets the operator reset unreadable storage',()=>{
-  const a=new MockStation(),run=(n:string)=>{a.enqueue(n);const s=new GameplaySession(100,a.current.sessionId);s.tick(100);a.save(s.finish('time-up')!);a.exit();};
-  for(let i=0;i<=WALL_MAX;i++)run('P'+i);
-  expect(a.wall.size).toBe(WALL_MAX);expect([...a.wall.values()].some(r=>r.nickname==='P0')).toBe(false);expect(a.records).toHaveLength(WALL_MAX+1);
+it('lets the operator reset unreadable storage',()=>{
   const store=new Map<string,string>([['rog-future-gamer.records.v1','{broken']]);
   vi.stubGlobal('window',{});vi.stubGlobal('localStorage',{getItem:(k:string)=>store.get(k)??null,setItem:(k:string,v:string)=>store.set(k,v)});
   try{

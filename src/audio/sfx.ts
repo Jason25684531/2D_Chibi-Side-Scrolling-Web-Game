@@ -23,7 +23,8 @@ const LOOP=new Set<SfxId>(['PWR-07','ENV-02','ENV-04']);
 /** Gameplay events → [sound, delay s, counted from the end of this sound]. Sheet rows 08 拾取, 09/10 Power-up, 11 受傷, 13 跌倒, 18 Portal, 20 時間到. */
 const ON:Partial<Record<EventKind,[SfxId,number,SfxId?][]>>={
   BADGE_COLLECTED:[['PWR-01',0]],BADGE_SCATTERED:[['PWR-02',0]],PLAYER_DAMAGED:[['HIT-03',0]],PLAYER_RESPAWNED:[['SYS-02',0]],
-  GOAL_REACHED:[['ENV-03',0],['SYS-03',0,'ENV-03'],['ANN-03',.8,'ENV-03']], // PO 2026-11-05: portal first, then the clear jingleTIME_UP:[['SYS-04',0],['ANN-04',.4],['SYS-03',.4]],
+  GOAL_REACHED:[['ENV-03',0],['SYS-03',0,'ENV-03'],['ANN-03',.8,'ENV-03']], // PO 2026-11-05: portal first, then the clear jingle
+  TIME_UP:[['SYS-04',0],['ANN-04',.4],['SYS-03',.4]],
 };
 const URLS=import.meta.glob('../../Audio/*.{mp3,wav}',{eager:true,query:'?url',import:'default'}) as Record<string,string>;
 let sound:Phaser.Sound.BaseSoundManager|null=null;

@@ -7,8 +7,6 @@ export type Identity={sessionId:string;nickname:string;defaultNickname:string;ch
 export type Ranking={runId:string;nickname:string;score:number;tier:string;titles:string[];characterId?:string;completedAt?:string};
 const RECORDS_KEY='rog-future-gamer.records.v1';
 const SEQ_KEY='fg3-plyr-seq',TIME_KEY='rog-future-gamer.time',REPLAY_KEY='rog-future-gamer.replay';
-/** P0 wall keeps the most recent players only, so an all-day kiosk does not grow memory or DOM. Calibration knob. */
-export const WALL_MAX=30;
 /** Operator run length from the P0 system menu; falls back to config when unset, invalid or storage is denied. */
 export function savedTier(){try{const n=Number(localStorage.getItem(TIME_KEY));if(P.timeTiers.includes(n))return n;}catch{/* storage denied */}return P.timeTier;}
 export function saveTier(n:number){try{localStorage.setItem(TIME_KEY,String(n));}catch{/* storage denied: this session only */}}
@@ -36,7 +34,7 @@ export class MockStation {
   private replay=(()=>{try{return localStorage.getItem(REPLAY_KEY)!=='0';}catch{return true;}})();
   get replayEnabled(){return this.replay;}
   set replayEnabled(on:boolean){this.replay=on;try{localStorage.setItem(REPLAY_KEY,on?'1':'0');}catch{/* storage denied: this session only */}}
-  records:Ranking[]=[];wall=new Map<string,Ranking&{look?:string}>();
+  records:Ranking[]=[];
   storageStatus:'loading'|'ready'|'error'='loading';storageError='';private writable=false;
   constructor(){this.load();}
   load(){
@@ -65,14 +63,12 @@ export class MockStation {
   save(result:GameplayResult){
     if(!this.current||this.records.some(r=>r.runId===result.runId))return;
     const row={runId:result.runId,nickname:this.current.nickname.trim().slice(0,24)||'Future Gamer',score:result.score,tier:result.timeTier,titles:titles(result),characterId:this.current.characterId,completedAt:new Date().toISOString()};
-    // The custom pose goes to the in-memory wall only, never into the persisted record.
-    const g=this.current.generation;this.records.push(row);this.wall.set(this.current.sessionId,{...row,look:g.state==='ready'?g.skin.poses.idle:undefined});
-    if(this.wall.size>WALL_MAX)this.wall.delete(this.wall.keys().next().value!); // Map order = oldest first
+    this.records.push(row);
     this.persist();
   }
-  /** Operator: drop one record (and its wall card), or every record on every tier. */
-  remove(runId:string){this.records=this.records.filter(r=>r.runId!==runId);for(const [k,r] of this.wall)if(r.runId===runId)this.wall.delete(k);this.persist();}
+  /** Operator: drop one record, or every record on every tier. */
+  remove(runId:string){this.records=this.records.filter(r=>r.runId!==runId);this.persist();}
   /** Explicit operator reset may overwrite unreadable storage; automatic paths still keep it. */
-  clear(){this.records=[];this.wall.clear();this.writable=true;this.persist();}
+  clear(){this.records=[];this.writable=true;this.persist();}
   board(tier:number){return this.records.filter(r=>r.tier===String(tier)).sort((a,b)=>b.score-a.score);}
 }

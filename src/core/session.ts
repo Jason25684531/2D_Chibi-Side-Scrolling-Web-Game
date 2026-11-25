@@ -6,8 +6,7 @@ import {PowerUpSystem} from '../powerup/system';
 import {ComboSystem} from '../combo/system';
 import {ScoreEngine} from '../score/engine';
 import type {PowerKind} from '../level/data';
-import {TEST_PROFILE as P} from './config';
-export type GameplayResult=Readonly<{schemaVersion:1;sessionId:string;attemptId:string;runId:string;timeTier:string;duration:number;endReason:'goal'|'time-up';remainingTime:number;heldBadgeCount:number;score:number;scoreBreakdown:Readonly<ScoreEngine['breakdown']>;badgeDropOccurred:boolean;playerStatistics:Readonly<GameplaySession['stats']>;rulesStatus:'test-only';unresolvedRuleIds:readonly string[]}>;
+export type GameplayResult=Readonly<{schemaVersion:1;sessionId:string;runId:string;timeTier:string;duration:number;endReason:'goal'|'time-up';remainingTime:number;heldBadgeCount:number;score:number;scoreBreakdown:Readonly<ScoreEngine['breakdown']>;badgeDropOccurred:boolean;playerStatistics:Readonly<GameplaySession['stats']>}>;
 export class GameplaySession {
   run:RunStateManager;events:GameplayEventBus;
   badges=new BadgeSystem();damage=new DamageSystem();power=new PowerUpSystem();combo=new ComboSystem();score:ScoreEngine;
@@ -49,7 +48,7 @@ export class GameplaySession {
     if(this.run.remaining<=1e-8&&!this.deadlineThisTick)reason='time-up';
     if(this.run.phase==='respawning')this.run.recovered();
     this.run.end(reason);this.score.settle(reason,this.run.remaining,this.badges.held,this.badges.dropped);
-    this.result=Object.freeze({schemaVersion:1,sessionId:this.run.sessionId,attemptId:this.run.attemptId,runId:this.run.runId,timeTier:this.run.timeTier,duration:this.run.duration,endReason:reason,remainingTime:this.run.remaining,heldBadgeCount:this.badges.held,badgeDropOccurred:this.badges.dropped,score:this.score.total,scoreBreakdown:Object.freeze({...this.score.breakdown}),playerStatistics:Object.freeze({...this.stats}),rulesStatus:P.rulesStatus,unresolvedRuleIds:Object.freeze([...P.unresolvedRuleIds])});
+    this.result=Object.freeze({schemaVersion:1,sessionId:this.run.sessionId,runId:this.run.runId,timeTier:this.run.timeTier,duration:this.run.duration,endReason:reason,remainingTime:this.run.remaining,heldBadgeCount:this.badges.held,badgeDropOccurred:this.badges.dropped,score:this.score.total,scoreBreakdown:Object.freeze({...this.score.breakdown}),playerStatistics:Object.freeze({...this.stats})});
     this.emit(reason==='goal'?'GOAL_REACHED':'TIME_UP','player',reason);this.run.finish();return this.result;
   }
   dispose(){this.events.dispose();this.power.clear();}

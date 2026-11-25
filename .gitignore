@@ -1,122 +1,35 @@
-# Secrets and Environment
-.env
-.env.local
-.secrets/
-*.pem
-*.key
-doc/
-.claude/
-.agent/
-.gemini/
-.cursor/
-.codex/
-openspec/*
-.serena/*
-
-!openspec/changes/
-openspec/changes/*
-!openspec/changes/fix-match-persistence-lifecycle/
-!openspec/changes/rog-future-gamer-uiux/
-
-# Python
-venv/
-.venv/
-env/
-*.pyc
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-.github/*
-# IDEs
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Logs
-*.log
-logs/
 node_modules/
+dist/
 test-results/
 playwright-report/
+*.log
+.env
+.env.local
 
-# Database
-*.db
-*.sqlite
-*.sqlite3
-
-# Docker
-.docker/
-
-# Testing
-.pytest_cache/
-.coverage
-htmlcov/
-
-# Jupyter
-.ipynb_checkpoints/
-*.ipynb
-
-# MockBroker State Files (Local Simulation)
-data/mock_broker_state.json
-**/test_broker_state.json
-test_broker_state.json
-
-/data/
-
+# Local tools and editors
+.agent/
+.claude/
+.codex/
+.cursor/
+.gemini/
+.serena/
+.tokensave/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+__pycache__/
+*.pyc
 .venv*/
-.tokensave/*
-reports/*
 
-outputs/*
-docs/research-publication/*
-docs/handoff/*
-
-Char_Aassest/*
-public/*
-sample_UIUX/*
-openspec/*
-
-# Track the Experience 3 planning change while preserving other ignore rules.
-
-docs/*
-webUIUX_Ref/*
-openspec/*
-
-# ROG UI implementation deliverables only.
-openspec/*
-!public/assets/
-!docs/evidence/
-docs/evidence/*
-!docs/evidence/rog-uiux/
-!docs/rog-uiux-report.md
-docs/*
-assets/*
-public/*
-1102_關卡編輯器/*
-Audio/*
-ComfyUI_API/*
-assest/*
+# Source art and reference packages (GBs). public/ is rebuilt by `npm run assets:stage` and tools/subset-fonts.py.
+1102_關卡編輯器/
+assest/
+Char_Aassest/
+ComfyUI_API/
+webUIUX_Ref/
+public/
+docs/
 mainvis.jpg
+openspec/*
+Audio/*

@@ -12,7 +12,6 @@ export class GameplayStateMachine {
 type Phase = 'new-run'|'running'|'paused'|'respawning'|'goal-reached'|'time-up'|'finished';
 export class RunStateManager {
   readonly runId = crypto.randomUUID();
-  readonly attemptId = crypto.randomUUID();
   phase: Phase = 'new-run';
   elapsed = 0;
   remaining: number;

@@ -15,13 +15,12 @@ export function deriveProfile(p:LevelPhysics,tile=TILE){
 // Rules follow CYBER RUN planning v0.3 (PO decision 2026-11-02); one run length per station, see timeTier.
 export const TEST_PROFILE = {
   // timeTier = default run length (PO 2026-11-04: 120 s); operators switch between timeTiers in the P0 system menu (H).
-  rulesStatus: 'test-only' as const, timeTier: 120, timeTiers: [60, 90, 100, 120],
+  timeTier: 120, timeTiers: [60, 90, 100, 120],
   width: 960, height: 540, bodyWidth: TILE*.75, bodyHeight: TILE*2,
   ...deriveProfile(level.physics),
   dashCooldown: .6, coyoteTime: .1, jumpCut: .45, stompBounce: .75,
   deadzone: 0.22, scatterCap: 12, scatterPickupDelay: 0.25, scatterLaunch: 360, scatterSpread: 55, scatterBounce: .4, allySpeed: 1.1, allyAttract: 6*TILE,
-  enemyPoints: 20, badgePoints: 10, comboTiers: [1, 1.5, 2, 2.5], shockTime: .6,
-  unresolvedRuleIds: ['C3','B10','B11']
+  enemyPoints: 20, badgePoints: 10, comboTiers: [1, 1.5, 2, 2.5], shockTime: .6
 };
 export type Mode={tag?:string;color?:string;speed:number;range:number;cooldown:number;height:number;lift:number;gravity:number;spin:number;hitbox:number[];pierce?:number;burst?:{size:number[];scale:number;time:number}};
 export const ATTACK_ITEMS=items.items;
